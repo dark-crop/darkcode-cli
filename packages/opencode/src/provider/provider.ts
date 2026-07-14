@@ -176,6 +176,16 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           },
         },
       }),
+    // Built-in default provider (see src/config/builtin-provider.ts): always autoloaded so a
+    // fresh install lists these models with zero config. The apiKey (from stored auth or the
+    // DARK_LLM_KEY env var, resolved generically by the env/auth loaders above) is picked up
+    // via `provider.key` -> `options.apiKey` in resolveSDK once the user configures one.
+    "dark-llm": Effect.fnUntraced(function* (input: Info) {
+      return {
+        autoload: Object.keys(input.models).length > 0,
+        options: {},
+      }
+    }),
     opencode: Effect.fnUntraced(function* (input: Info) {
       const env = yield* dep.env()
       const hasKey = iife(() => {
