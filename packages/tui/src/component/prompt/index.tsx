@@ -1331,28 +1331,6 @@ export function Prompt(props: PromptProps) {
       }),
     }
   })
-  // Claude Code-style working verbs shown next to the spinner while busy.
-  const WORKING_VERBS = [
-    "Thinking", "Pondering", "Brewing", "Percolating", "Conjuring", "Weaving",
-    "Crunching", "Distilling", "Scheming", "Tinkering", "Simmering", "Untangling",
-    "Composing", "Sketching", "Forging", "Mulling", "Noodling", "Cooking",
-  ]
-  const [workingVerb, setWorkingVerb] = createSignal("Thinking")
-  const [workingSeconds, setWorkingSeconds] = createSignal(0)
-  createEffect(() => {
-    if (status().type === "idle") return
-    const pick = () => setWorkingVerb(WORKING_VERBS[Math.floor(Math.random() * WORKING_VERBS.length)]!)
-    pick()
-    setWorkingSeconds(0)
-    const started = Date.now()
-    const tick = setInterval(() => setWorkingSeconds(Math.floor((Date.now() - started) / 1000)), 1000)
-    const rotate = setInterval(pick, 12000)
-    onCleanup(() => {
-      clearInterval(tick)
-      clearInterval(rotate)
-    })
-  })
-
   const maxHeight = createMemo(() => tuiConfig.prompt?.max_height ?? Math.max(6, Math.floor(dimensions().height / 3)))
   const moveLabelWidth = createMemo(() => Math.max(12, Math.min(44, dimensions().width - 48)))
 
@@ -1444,9 +1422,12 @@ export function Prompt(props: PromptProps) {
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
         {/* Footer section: model/agent on the left, key hints on the right. */}
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
-          <Show when={status().type === "idle" && store.mode === "normal" && local.agent.current()}>
+          <Show when={store.mode === "normal" && local.agent.current()}>
             {(agent) => (
               <box flexDirection="row" gap={1} flexShrink={0}>
+                <Show when={status().type === "busy"}>
+                  <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
+                </Show>
                 <text fg={highlight()}>{Locale.titlecase(agent().name)}</text>
                 <text fg={theme.textMuted}>·</text>
                 <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>
@@ -1471,16 +1452,6 @@ export function Prompt(props: PromptProps) {
                 justifyContent={status().type === "retry" ? "space-between" : "flex-start"}
               >
                 <box flexShrink={0} flexDirection="row" gap={1}>
-                  <box marginLeft={1}>
-                    <Show when={kv.get("animations_enabled", true)} fallback={<text fg={theme.textMuted}>[⋯]</text>}>
-                      <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-                    </Show>
-                  </box>
-                  <Show when={status().type === "busy"}>
-                    <text fg={theme.text}>
-                      {workingVerb()}… <span style={{ fg: theme.textMuted }}>({workingSeconds()}s)</span>
-                    </text>
-                  </Show>
                   <box flexDirection="row" gap={1} flexShrink={0}>
                     {(() => {
                       const retry = createMemo(() => {
