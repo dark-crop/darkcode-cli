@@ -25,6 +25,7 @@ import { SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner } from "../../component/spinner"
 import { useWorkingVerb } from "../../util/working-verb"
+import { createColors, createFrames } from "../../ui/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
@@ -1280,6 +1281,7 @@ export function Session() {
                     </Switch>
                   )}
                 </For>
+                <WorkingIndicator sessionID={route.sessionID} />
               </scrollbox>
               <box flexShrink={0}>
                 <Show when={permissions().length > 0}>
@@ -1452,6 +1454,56 @@ function UserMessage(props: {
         />
       </Show>
     </>
+  )
+}
+
+// Claude Code-style working row shown instantly when the session goes busy:
+// a block spinner + rotating verb + elapsed + streamed output tokens.
+function WorkingIndicator(props: { sessionID: string }) {
+  const { theme } = useTheme()
+  const sync = useSync()
+  const local = useLocal()
+  const working = useWorkingVerb()
+
+  const busy = createMemo(() => sync.data.session_status[props.sessionID]?.type === "busy")
+  const [elapsed, setElapsed] = createSignal(0)
+  createEffect(() => {
+    if (!busy()) {
+      setElapsed(0)
+      return
+    }
+    const start = Date.now()
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000)
+    onCleanup(() => clearInterval(timer))
+  })
+  const tokens = createMemo(() => {
+    const msg = sync.data.message[props.sessionID] ?? []
+    const last = msg.at(-1)
+    if (last?.role !== "assistant") return 0
+    return (last as AssistantMessage).tokens?.output ?? 0
+  })
+  const label = createMemo(() => {
+    const s = elapsed()
+    const e = s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`
+    const t = tokens()
+    const tk = t >= 1000 ? (t / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(t)
+    return t > 0 ? `(${e} · ↓ ${tk} tokens)` : `(${e})`
+  })
+  const spinnerDef = createMemo(() => {
+    const agent = local.agent.current()
+    const color = agent ? local.agent.color(agent.name) : theme.primary
+    const opts = { color, style: "blocks" as const, inactiveFactor: 0.6, minAlpha: 0.3 }
+    return { frames: createFrames(opts), color: createColors(opts) }
+  })
+
+  return (
+    <Show when={busy()}>
+      <box flexDirection="row" gap={1} paddingLeft={3} marginTop={1}>
+        <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
+        <text fg={theme.primary}>{working.verb()}…</text>
+        <text fg={theme.textMuted}>{label()}</text>
+      </box>
+    </Show>
   )
 }
 
@@ -1645,7 +1697,6 @@ function ReasoningHeader(props: {
   duration?: string
 }) {
   const { theme } = useTheme()
-  const working = useWorkingVerb()
   const fg = () =>
     props.open
       ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
@@ -1655,9 +1706,7 @@ function ReasoningHeader(props: {
     <Switch>
       <Match when={!props.done}>
         <box flexDirection="row">
-          <Spinner color={fg()}>
-            {props.title ? working.verb() + ": " + props.title : working.verb() + "… (" + working.seconds() + "s)"}
-          </Spinner>
+          <Spinner color={fg()}>{props.title ? "Thinking: " + props.title : "Thinking"}</Spinner>
         </box>
       </Match>
       <Match when={true}>
