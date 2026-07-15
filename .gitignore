@@ -32,3 +32,8 @@ UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 tsconfig.tsbuildinfo
+
+# AI assistant context — never commit
+CLAUDE.md
+/AGENTS.md
+.claude/

@@ -1,129 +1,107 @@
 <p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
+  <h1 align="center">darkcode</h1>
 </p>
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
+<p align="center">A polished terminal coding agent for your <strong>own local, uncensored LLMs</strong>.</p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+<p align="center">
+  <a href="#installation"><img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational?style=flat-square" /></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
+  <a href="https://github.com/chatthong/darkcode"><img alt="status" src="https://img.shields.io/badge/status-early%20preview-orange?style=flat-square" /></a>
+</p>
 
 ---
 
-### Installation
+**darkcode** is a fork of [opencode](https://github.com/sst/opencode) built for one job: give people running local LLMs a terminal agent that actually feels good to use. It ships with a built-in provider for the [Dark-LLM](#the-dark-llm-gateway) gateway, two-axis model control (`/model` for the lane, `/effort` for the reasoning tier), and a one-command sign-in — so a fresh install talks to your own GPU box with zero config.
+
+If you have wired up a local stack and found the existing CLIs a step behind the hosted ones, this is meant to close that gap.
+
+> **Early preview.** darkcode is under active development and diverges from upstream opencode. It is not affiliated with or endorsed by the opencode team.
+
+## Why
+
+Running your own models should not mean settling for a worse agent. darkcode keeps opencode's strong engine (agents, tools, MCP, LSP, sessions) and adds the pieces that make a local stack pleasant:
+
+- **Built-in local provider** — a `dark-llm` provider is baked in as a zero-config default. Fresh installs list and use your models immediately; your global/project config still overrides or disables it.
+- **Two-axis model control** — pick the **lane** with `/model` (Singto / Chang / Talay) and the **effort** with `/effort` (low / med / high / ultra). The prompt shows the active choice as `Chang · med`.
+- **One-command sign-in** — `darkcode login` supports three ways in: paste a token, username + password, or open the browser and paste the key back.
+- **A calmer look** — a warm default theme (light + dark) and working-verb spinners, tuned to feel closer to a hosted agent than a raw REPL.
+
+## Installation
+
+darkcode is not on a package registry yet. Build it from source:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
-
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
+git clone https://github.com/chatthong/darkcode.git
+cd darkcode
+bun install
+bun run packages/opencode/src/index.ts --help   # run from source
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
+> Requires [Bun](https://bun.sh). A packaged `darkcode` binary and installers are on the roadmap.
 
-### Desktop App (BETA)
-
-OpenCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/opencode/releases) or [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
+## Quick start
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+# 1. sign in to your gateway (see the three methods below)
+darkcode login
+
+# 2. start the TUI — it defaults to the built-in dark-llm provider
+darkcode
+
+# 3. inside the TUI:
+/model     # choose a lane:  Singto (fast) · Chang (coding) · Talay (heavy)
+/effort    # choose a tier:  low · med · high · ultra
 ```
 
-#### Installation Directory
-
-The install script respects the following priority order for the installation path:
-
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if it exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
+Non-interactive use works too:
 
 ```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+darkcode run --model dark-llm/singto-fast-low "explain this error"
 ```
 
-### Agents
+### Signing in (3 ways)
 
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
+`darkcode login` walks you through whichever you prefer:
 
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
+| Method | When to use |
+| --- | --- |
+| **Token** | You already have an `sk-…` key — paste it. |
+| **Username & password** | Log in with your gateway account. |
+| **Open in browser** | Log in on the web, create a key, paste it back. |
 
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
+All three end the same way: the key is validated against the gateway and stored, so your model calls just work afterward.
 
-Learn more about [agents](https://opencode.ai/docs/agents).
+### Model lanes & effort
 
-### Documentation
+The built-in provider exposes three lanes, each at four effort tiers:
 
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
+| Lane | Role | Model |
+| --- | --- | --- |
+| **Singto** | fast answers, cheap fan-out | 35B MoE |
+| **Chang** | coding + orchestration (default) | 27B dense |
+| **Talay** | heavy reasoning / agent work | 122B MoE |
 
-### Contributing
+`low` turns thinking off for clean, fast output; `med`/`high`/`ultra` enable reasoning with an increasing budget. `/model` and `/effort` compose — Chang at `high` is `chang-code-high`.
 
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+## The Dark-LLM gateway
 
-### Building on OpenCode
+darkcode is the client half of a two-part local stack. The server half, **[Dark-LLM](https://github.com/chatthong/dark-llm)**, is an OpenAI-compatible gateway over your own GPU box (llama.cpp + llama-swap + LiteLLM, plus a ComfyUI bridge for images). darkcode's built-in provider points at it out of the box, but because it is just OpenAI-compatible, you can point darkcode at any compatible endpoint via config or `darkcode login --url`.
 
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+## Configuration
 
----
+darkcode reads the same config as opencode (`opencode.json`, `.opencode/`, `~/.config/opencode/`). To disable the built-in provider entirely:
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+```json
+{ "disabled_providers": ["dark-llm"] }
+```
+
+To point it at your own gateway, set the `dark-llm` provider's `api` base or use `darkcode login --url https://your-gateway/v1`.
+
+## Relationship to opencode
+
+darkcode is a downstream fork. It tracks opencode's engine and re-brands the user-facing surface; internal package names (`@opencode-ai/*`), config paths, and API shapes are intentionally left compatible to keep merges from upstream tractable. Credit for the underlying agent belongs to the [opencode](https://github.com/sst/opencode) team.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
