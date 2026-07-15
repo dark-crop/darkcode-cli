@@ -1,6 +1,6 @@
 import { Prompt, type PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount } from "solid-js"
-import { Welcome } from "../component/welcome"
+import { Header } from "../component/header"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
@@ -72,11 +72,9 @@ export function Home() {
       {/* Same skeleton as a session: header (top) · body (fills) · input · footer.
           On the launch screen the body is simply empty. */}
       <box flexGrow={1} flexDirection="column" paddingLeft={2} paddingRight={2}>
-        <box paddingTop={1} flexShrink={0}>
-          <pluginRuntime.Slot name="home_logo" mode="replace">
-            <Welcome />
-          </pluginRuntime.Slot>
-        </box>
+        <pluginRuntime.Slot name="home_logo" mode="replace">
+          <Header />
+        </pluginRuntime.Slot>
         <box flexGrow={1} minHeight={0} />
         <box width="100%" maxWidth={promptMaxWidth()} zIndex={1000} flexShrink={0}>
           <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
