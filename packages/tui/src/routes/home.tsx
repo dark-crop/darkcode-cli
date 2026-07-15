@@ -1,5 +1,5 @@
 import { Prompt, type PromptRef } from "../component/prompt"
-import { createEffect, createMemo, createSignal, onMount } from "solid-js"
+import { createEffect, createSignal, onMount } from "solid-js"
 import { Header } from "../component/header"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
@@ -9,8 +9,6 @@ import { usePromptRef } from "../context/prompt"
 import { useLocal } from "../context/local"
 import { usePluginRuntime } from "../plugin/runtime"
 import { useEditorContext } from "../context/editor"
-import { useTerminalDimensions } from "@opentui/solid"
-import { useTuiConfig } from "../config"
 import { HomeSessionDestinationProvider } from "./home/session-destination"
 
 let once = false
@@ -28,13 +26,6 @@ export function Home() {
   const args = useArgs()
   const local = useLocal()
   const editor = useEditorContext()
-  const dimensions = useTerminalDimensions()
-  const tuiConfig = useTuiConfig()
-  const promptMaxWidth = createMemo(() => {
-    const configured = tuiConfig.prompt?.max_width
-    if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
-    return configured ?? 75
-  })
   let sent = false
 
   onMount(() => {
@@ -71,17 +62,22 @@ export function Home() {
     <HomeSessionDestinationProvider>
       {/* Same skeleton as a session: header (top) · body (fills) · input · footer.
           On the launch screen the body is simply empty. */}
-      <box flexGrow={1} flexDirection="column" paddingLeft={2} paddingRight={2}>
-        <pluginRuntime.Slot name="home_logo" mode="replace">
-          <Header />
-        </pluginRuntime.Slot>
+      <box flexGrow={1} flexDirection="column">
+        {/* Header content is padded; the input frame is full-width so its dividers span the screen. */}
+        <box paddingLeft={2} paddingRight={2}>
+          <pluginRuntime.Slot name="home_logo" mode="replace">
+            <Header />
+          </pluginRuntime.Slot>
+        </box>
         <box flexGrow={1} minHeight={0} />
-        <box width="100%" maxWidth={promptMaxWidth()} zIndex={1000} flexShrink={0}>
+        <box width="100%" zIndex={1000} flexShrink={0}>
           <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
             <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
           </pluginRuntime.Slot>
         </box>
-        <pluginRuntime.Slot name="home_bottom" />
+        <box paddingLeft={2} paddingRight={2}>
+          <pluginRuntime.Slot name="home_bottom" />
+        </box>
         <Toast />
       </box>
       <box width="100%" flexShrink={0}>

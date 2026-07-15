@@ -1492,7 +1492,7 @@ export function Prompt(props: PromptProps) {
           </box>
         </box>
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
-        <box width="100%" flexDirection="row" justifyContent="space-between">
+        <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
           <Switch>
             <Match when={status().type !== "idle"}>
               <box
