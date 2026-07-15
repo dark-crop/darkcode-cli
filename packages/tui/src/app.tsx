@@ -42,6 +42,7 @@ import { PermissionProvider } from "./context/permission"
 import { DialogLane } from "./component/dialog-lane"
 import { DialogEffort } from "./component/dialog-effort"
 import { DialogLogin } from "./component/dialog-login"
+import { DialogContext } from "./component/dialog-context"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
@@ -636,6 +637,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "login",
         run: () => {
           dialog.replace(() => <DialogLogin />)
+        },
+      },
+      {
+        name: "context.show",
+        title: "Show context usage",
+        suggested: true,
+        category: "Session",
+        slashName: "context",
+        run: () => {
+          dialog.replace(() => <DialogContext />)
         },
       },
       {
