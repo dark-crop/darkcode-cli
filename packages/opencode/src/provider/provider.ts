@@ -8,6 +8,7 @@ import {
   DARK_LLM_BASE_URL,
   DARK_LLM_ENV_KEY,
   darkLlmModelFor,
+  darkLlmDisplayName,
 } from "@/config/builtin-provider"
 import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
@@ -1643,8 +1644,21 @@ const layer = Layer.effect(
                 if (!ids.length) return
                 const returned = new Set(ids)
                 const models = providers[darkllm].models
+                // Clone an existing entry to get the exact runtime model shape (api, variants,
+                // etc.) for any gateway-reported id we don't statically define.
+                const template = Object.values(models)[0] as any
                 for (const id of Object.keys(models)) if (!returned.has(id)) delete models[id]
-                for (const id of ids) if (!models[id]) models[id] = darkLlmModelFor(id) as (typeof models)[string]
+                for (const id of ids) {
+                  if (models[id]) continue
+                  const base: any = template
+                    ? { ...template, limit: { ...template.limit }, api: { ...(template.api ?? {}), id } }
+                    : { ...(darkLlmModelFor(id) as any), api: { id } }
+                  base.name = darkLlmDisplayName(id)
+                  base.family = id.replace(/-(low|med|high|ultra)$/, "")
+                  base.id = id
+                  base.reasoning = /-(high|ultra)$/.test(id)
+                  models[id] = base
+                }
               } catch {}
             })
           }
