@@ -1463,11 +1463,11 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
   const working = useWorkingVerb()
-  const generating = createMemo(() => !final() && props.message.error?.name !== "MessageAbortedError")
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
   })
+  const generating = createMemo(() => !final() && props.message.error?.name !== "MessageAbortedError")
 
   const duration = createMemo(() => {
     if (!final()) return 0
