@@ -7,7 +7,9 @@ import { Flock } from "./util/flock"
 import { Flag } from "./flag/flag"
 import { makeGlobalNode } from "./effect/app-node"
 
-const app = "opencode"
+// darkcode uses its own XDG dirs (~/.config/darkcode, state, data, auth) so it
+// never reads the user's opencode config/providers (e.g. a Bonfire gateway).
+const app = "darkcode"
 const data = path.join(xdgData!, app)
 const cache = path.join(xdgCache!, app)
 const config = path.join(xdgConfig!, app)

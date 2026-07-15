@@ -35,7 +35,7 @@ import { ConfigPlugin } from "./plugin"
 import { ConfigVariable } from "./variable"
 import { Npm } from "@opencode-ai/core/npm"
 import { withTransientReadRetry } from "@/util/effect-http-client"
-import { darkLlmBuiltinConfig } from "./builtin-provider"
+import { darkLlmBuiltinConfig, DARK_LLM_PROVIDER_ID, DARK_LLM_DEFAULT_MODEL_ID } from "./builtin-provider"
 
 // Custom merge function that concatenates array fields instead of replacing them
 // Keep remeda's deep conditional merge type out of hot config-loading paths; TS profiling showed it dominates here.
@@ -584,6 +584,14 @@ const layer = Layer.effect(
         }
         if (Flag.OPENCODE_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
+        }
+
+        // darkcode is a locked dark-llm client: enforce (after ALL config merge, so
+        // nothing — user config, models.dev, or auth — can add others) that only the
+        // built-in dark-llm provider loads and the default model is a dark-llm lane.
+        result.enabled_providers = [DARK_LLM_PROVIDER_ID]
+        if (!result.model || !result.model.startsWith(`${DARK_LLM_PROVIDER_ID}/`)) {
+          result.model = `${DARK_LLM_PROVIDER_ID}/${DARK_LLM_DEFAULT_MODEL_ID}`
         }
 
         return {

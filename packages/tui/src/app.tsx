@@ -39,7 +39,6 @@ import { DataProvider } from "./context/data"
 import { LocationProvider } from "./context/location"
 import { LocalProvider, useLocal } from "./context/local"
 import { PermissionProvider } from "./context/permission"
-import { DialogModel } from "./component/dialog-model"
 import { DialogLane } from "./component/dialog-lane"
 import { DialogEffort } from "./component/dialog-effort"
 import { useConnected } from "./component/use-connected"
@@ -649,15 +648,15 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         },
       },
       {
+        // darkcode exposes a single model command: /model (the lane picker). This
+        // keeps the <leader>m keybind and other references working by pointing them
+        // at the same lane picker; there is no separate /models full-list command.
         name: "model.list",
         title: "Switch model",
-        suggested: true,
         category: "Agent",
-        slashName: "models",
-        // Bias /mo toward /models over /move without changing global fuzzy scoring.
-        slashAliases: ["mo"],
+        hidden: true,
         run: () => {
-          dialog.replace(() => <DialogModel />)
+          dialog.replace(() => <DialogLane />)
         },
       },
       {
