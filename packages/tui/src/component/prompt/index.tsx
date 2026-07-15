@@ -1341,6 +1341,28 @@ export function Prompt(props: PromptProps) {
       }),
     }
   })
+  // Claude Code-style working verbs shown next to the spinner while busy.
+  const WORKING_VERBS = [
+    "Thinking", "Pondering", "Brewing", "Percolating", "Conjuring", "Weaving",
+    "Crunching", "Distilling", "Scheming", "Tinkering", "Simmering", "Untangling",
+    "Composing", "Sketching", "Forging", "Mulling", "Noodling", "Cooking",
+  ]
+  const [workingVerb, setWorkingVerb] = createSignal("Thinking")
+  const [workingSeconds, setWorkingSeconds] = createSignal(0)
+  createEffect(() => {
+    if (status().type === "idle") return
+    const pick = () => setWorkingVerb(WORKING_VERBS[Math.floor(Math.random() * WORKING_VERBS.length)]!)
+    pick()
+    setWorkingSeconds(0)
+    const started = Date.now()
+    const tick = setInterval(() => setWorkingSeconds(Math.floor((Date.now() - started) / 1000)), 1000)
+    const rotate = setInterval(pick, 12000)
+    onCleanup(() => {
+      clearInterval(tick)
+      clearInterval(rotate)
+    })
+  })
+
   const maxHeight = createMemo(() => tuiConfig.prompt?.max_height ?? Math.max(6, Math.floor(dimensions().height / 3)))
   const moveLabelWidth = createMemo(() => Math.max(12, Math.min(44, dimensions().width - 48)))
 
@@ -1522,6 +1544,11 @@ export function Prompt(props: PromptProps) {
                       <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
                     </Show>
                   </box>
+                  <Show when={status().type === "busy"}>
+                    <text fg={theme.text}>
+                      {workingVerb()}… <span style={{ fg: theme.textMuted }}>({workingSeconds()}s)</span>
+                    </text>
+                  </Show>
                   <box flexDirection="row" gap={1} flexShrink={0}>
                     {(() => {
                       const retry = createMemo(() => {
