@@ -62,6 +62,7 @@ function Version(props: { api: TuiPluginApi }) {
 }
 
 function View(props: { api: TuiPluginApi }) {
+  const theme = () => props.api.theme.current
   return (
     <box
       width="100%"
@@ -72,6 +73,8 @@ function View(props: { api: TuiPluginApi }) {
       flexDirection="row"
       flexShrink={0}
       gap={2}
+      border={["top"]}
+      borderColor={theme().border}
     >
       <Directory api={props.api} />
       <Mcp api={props.api} />

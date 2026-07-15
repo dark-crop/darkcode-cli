@@ -80,14 +80,16 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const [agentStore, setAgentStore] = createStore({
         current: undefined as string | undefined,
       })
+      // Brand primary first so the default agent (Build) and the input rail/meta it
+      // drives use the darkcode brand color, not blue.
       const colors = createMemo(() => [
-        theme.secondary,
+        theme.primary,
         theme.accent,
+        theme.secondary,
         theme.success,
         theme.warning,
-        theme.primary,
-        theme.error,
         theme.info,
+        theme.error,
       ])
       return {
         list() {
