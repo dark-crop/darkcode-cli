@@ -1694,10 +1694,10 @@ function ReasoningHeader(props: {
 
   return (
     <Switch>
+      {/* While reasoning is streaming, the single live indicator is the WorkingIndicator;
+          the reasoning header only shows its "Thought: Xs" summary once done. */}
       <Match when={!props.done}>
-        <box flexDirection="row">
-          <Spinner color={fg()}>{props.title ? "Thinking: " + props.title : "Thinking"}</Spinner>
-        </box>
+        <box />
       </Match>
       <Match when={true}>
         <text fg={fg()} wrapMode="none">
