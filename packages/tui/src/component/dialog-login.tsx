@@ -5,6 +5,8 @@ import { useDialog } from "../ui/dialog"
 import { useSDK } from "../context/sdk"
 import { useSync } from "../context/sync"
 import { useToast } from "../ui/toast"
+import { useTheme } from "../context/theme"
+import { TextAttributes } from "@opentui/core"
 import open from "open"
 
 // darkcode only talks to the Dark LLM gateway; a LiteLLM key is the sole credential.
@@ -18,6 +20,7 @@ export function DialogLogin() {
   const sdk = useSDK()
   const sync = useSync()
   const toast = useToast()
+  const { theme } = useTheme()
 
   async function validate(key: string): Promise<boolean> {
     try {
@@ -48,9 +51,20 @@ export function DialogLogin() {
   }
 
   async function browserFlow() {
-    await open(`${GATEWAY}/ui`).catch(() => undefined)
-    const key = await DialogPrompt.show(dialog, "Log in in your browser, create a key, then paste it here", {
+    const url = `${GATEWAY}/ui`
+    // Try to open it, but always SHOW the URL so it can be copied (auto-open may fail
+    // or land in the wrong browser profile).
+    await open(url).catch(() => undefined)
+    const key = await DialogPrompt.show(dialog, "Sign in, create a Virtual Key, then paste it below", {
       placeholder: "sk-...",
+      description: () => (
+        <box gap={1}>
+          <text fg={theme.textMuted}>Open this page (click to open, or copy it):</text>
+          <text fg={theme.primary} attributes={TextAttributes.BOLD} onMouseUp={() => void open(url).catch(() => {})}>
+            {url}
+          </text>
+        </box>
+      ),
     })
     if (!key || !key.trim()) return
     await storeKey(key.trim())
