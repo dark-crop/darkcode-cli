@@ -41,6 +41,7 @@ import { LocalProvider, useLocal } from "./context/local"
 import { PermissionProvider } from "./context/permission"
 import { DialogLane } from "./component/dialog-lane"
 import { DialogEffort } from "./component/dialog-effort"
+import { DialogLogin } from "./component/dialog-login"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
@@ -627,6 +628,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           local.session.quickSwitch(i + 1)
         },
       })),
+      {
+        name: "darkllm.login",
+        title: "Sign in to Dark LLM",
+        suggested: true,
+        category: "Agent",
+        slashName: "login",
+        run: () => {
+          dialog.replace(() => <DialogLogin />)
+        },
+      },
       {
         name: "model.lane",
         title: "Switch model lane (Singto / Chang / Talay)",
