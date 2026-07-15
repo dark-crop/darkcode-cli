@@ -1462,6 +1462,8 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
+  const working = useWorkingVerb()
+  const generating = createMemo(() => !final() && props.message.error?.name !== "MessageAbortedError")
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
@@ -1548,13 +1550,23 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               >
                 ▣{" "}
               </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {model()}</span>
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
+              <Show
+                when={generating()}
+                fallback={
+                  <>
+                    <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
+                    <span style={{ fg: theme.textMuted }}> · {model()}</span>
+                    <Show when={duration()}>
+                      <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
+                    </Show>
+                    <Show when={props.message.error?.name === "MessageAbortedError"}>
+                      <span style={{ fg: theme.textMuted }}> · interrupted</span>
+                    </Show>
+                  </>
+                }
+              >
+                <span style={{ fg: theme.text }}>{working.verb()}…</span>
+                <span style={{ fg: theme.textMuted }}> ({working.seconds()}s)</span>
               </Show>
             </text>
           </box>
