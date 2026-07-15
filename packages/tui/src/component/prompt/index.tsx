@@ -1448,51 +1448,29 @@ export function Prompt(props: PromptProps) {
               syntaxStyle={syntax()}
             />
             </box>
-            <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1} justifyContent="space-between">
-              <box flexDirection="row" gap={1}>
-                <Show when={local.agent.current()} fallback={<box height={1} />}>
-                  {(agent) => (
-                    <>
-                      <text fg={fadeColor(highlight(), agentMetaAlpha())}>
-                        {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
-                      </text>
-                      <Show when={store.mode === "normal" && local.permission.mode === "auto"}>
-                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
-                      </Show>
-                      <Show when={store.mode === "normal"}>
-                        <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
-                          <text
-                            flexShrink={0}
-                            fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
-                          >
-                            {local.model.parsed().model}
-                          </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
-                          <Show when={showVariant()}>
-                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
-                            <text>
-                              <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
-                                {local.model.variant.current()}
-                              </span>
-                            </text>
-                          </Show>
-                        </box>
-                      </Show>
-                    </>
-                  )}
-                </Show>
-              </box>
-              <Show when={hasRightContent()}>
-                <box flexDirection="row" gap={1} alignItems="center">
-                  {props.right}
-                </box>
-              </Show>
-            </box>
           </box>
         </box>
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
+        {/* Footer section: model/agent on the left, key hints on the right. */}
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
+          <Show when={status().type === "idle" && store.mode === "normal" && local.agent.current()}>
+            {(agent) => (
+              <box flexDirection="row" gap={1} flexShrink={0}>
+                <text fg={highlight()}>{Locale.titlecase(agent().name)}</text>
+                <text fg={theme.textMuted}>·</text>
+                <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>
+                  {local.model.parsed().model}
+                </text>
+                <text fg={theme.textMuted}>{currentProviderLabel()}</text>
+                <Show when={showVariant()}>
+                  <text fg={theme.textMuted}>·</text>
+                  <text>
+                    <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
+                  </text>
+                </Show>
+              </box>
+            )}
+          </Show>
           <Switch>
             <Match when={status().type !== "idle"}>
               <box

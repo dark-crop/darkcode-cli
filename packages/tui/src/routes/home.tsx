@@ -77,9 +77,6 @@ export function Home() {
         </box>
         <Toast />
       </box>
-      <box width="100%" flexShrink={0}>
-        <pluginRuntime.Slot name="home_footer" mode="single_winner" />
-      </box>
     </HomeSessionDestinationProvider>
   )
 }
