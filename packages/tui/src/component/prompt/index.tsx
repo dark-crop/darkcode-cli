@@ -1422,12 +1422,9 @@ export function Prompt(props: PromptProps) {
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
         {/* Footer section: model/agent on the left, key hints on the right. */}
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
-          <Show when={store.mode === "normal" && local.agent.current()}>
+          <Show when={status().type === "idle" && store.mode === "normal" && local.agent.current()}>
             {(agent) => (
               <box flexDirection="row" gap={1} flexShrink={0}>
-                <Show when={status().type === "busy"}>
-                  <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-                </Show>
                 <text fg={highlight()}>{Locale.titlecase(agent().name)}</text>
                 <text fg={theme.textMuted}>·</text>
                 <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>

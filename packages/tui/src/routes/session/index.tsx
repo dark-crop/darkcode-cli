@@ -1462,12 +1462,10 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
-  const working = useWorkingVerb()
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
   })
-  const generating = createMemo(() => !final() && props.message.error?.name !== "MessageAbortedError")
 
   const duration = createMemo(() => {
     if (!final()) return 0
@@ -1537,7 +1535,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         </box>
       </Show>
       <Switch>
-        <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
+        {/* Assistant header only appears once the message is done — the single working
+            indicator during generation is the reasoning/thinking spinner above. */}
+        <Match when={final() || props.message.error?.name === "MessageAbortedError"}>
           <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
             <text marginTop={1}>
               <span
@@ -1550,23 +1550,13 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               >
                 ▣{" "}
               </span>{" "}
-              <Show
-                when={generating()}
-                fallback={
-                  <>
-                    <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-                    <span style={{ fg: theme.textMuted }}> · {model()}</span>
-                    <Show when={duration()}>
-                      <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-                    </Show>
-                    <Show when={props.message.error?.name === "MessageAbortedError"}>
-                      <span style={{ fg: theme.textMuted }}> · interrupted</span>
-                    </Show>
-                  </>
-                }
-              >
-                <span style={{ fg: theme.text }}>{working.verb()}…</span>
-                <span style={{ fg: theme.textMuted }}> ({working.seconds()}s)</span>
+              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
+              <span style={{ fg: theme.textMuted }}> · {model()}</span>
+              <Show when={duration()}>
+                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
+              </Show>
+              <Show when={props.message.error?.name === "MessageAbortedError"}>
+                <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
             </text>
           </box>
