@@ -95,16 +95,14 @@ export function DialogLogin() {
   }
 
   async function browserFlow() {
-    // Deep-link straight to the Virtual Keys page (create-key), not the generic dashboard.
-    const url = `${GATEWAY}/ui/?page=api-keys`
-    // Try to open it, but always SHOW the URL so it can be copied (auto-open may fail
-    // or land in the wrong browser profile).
+    // The gateway's /token page: sign in there and it mints + shows your token to copy back.
+    const url = `${GATEWAY}/token`
     await open(url).catch(() => undefined)
-    const key = await DialogPrompt.show(dialog, "Sign in, create a Virtual Key, then paste it below", {
+    const key = await DialogPrompt.show(dialog, "Sign in in the browser, then paste your token below", {
       placeholder: "sk-...",
       description: () => (
         <box gap={1}>
-          <text fg={theme.textMuted}>Open this page (click to open, or copy it):</text>
+          <text fg={theme.textMuted}>Open this page, sign in, and it shows your token (click to open, or copy):</text>
           <text fg={theme.primary} attributes={TextAttributes.BOLD} onMouseUp={() => void open(url).catch(() => {})}>
             {url}
           </text>
