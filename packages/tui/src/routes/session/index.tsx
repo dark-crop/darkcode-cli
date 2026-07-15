@@ -1500,7 +1500,7 @@ function WorkingIndicator(props: { sessionID: string }) {
     <Show when={busy()}>
       <box flexDirection="row" gap={1} paddingLeft={3} marginTop={1}>
         <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-        <text fg={theme.primary}>{working.verb()}… </text>
+        <text fg={theme.primary}>{working.verb()} </text>
         <text fg={theme.textMuted}>{label()}</text>
       </box>
     </Show>
