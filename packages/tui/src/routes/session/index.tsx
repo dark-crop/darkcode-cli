@@ -1500,7 +1500,7 @@ function WorkingIndicator(props: { sessionID: string }) {
     <Show when={busy()}>
       <box flexDirection="row" gap={1} paddingLeft={3} marginTop={1}>
         <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
-        <text fg={theme.primary}>{working.verb()}…</text>
+        <text fg={theme.primary}>{working.verb()}… </text>
         <text fg={theme.textMuted}>{label()}</text>
       </box>
     </Show>
@@ -1586,34 +1586,14 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           <text fg={theme.textMuted}>{errorMessage(props.message.error)}</text>
         </box>
       </Show>
-      <Switch>
-        {/* Assistant header only appears once the message is done — the single working
-            indicator during generation is the reasoning/thinking spinner above. */}
-        <Match when={final() || props.message.error?.name === "MessageAbortedError"}>
-          <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
-            <text marginTop={1}>
-              <span
-                style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : local.agent.color(props.message.agent),
-                }}
-              >
-                ▣{" "}
-              </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {model()}</span>
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
-              </Show>
-            </text>
-          </box>
-        </Match>
-      </Switch>
+      {/* Interrupted marker only; no per-message model/duration header. */}
+      <Show when={props.message.error?.name === "MessageAbortedError"}>
+        <box paddingLeft={3}>
+          <text marginTop={1} fg={theme.textMuted}>
+            interrupted
+          </text>
+        </box>
+      </Show>
     </>
   )
 }
@@ -1697,10 +1677,13 @@ function ReasoningHeader(props: {
   duration?: string
 }) {
   const { theme } = useTheme()
+  // Grey once done ("Thought: …"); colored while actively thinking.
   const fg = () =>
-    props.open
-      ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
-      : theme.warning
+    props.done
+      ? theme.textMuted
+      : props.open
+        ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
+        : theme.warning
 
   return (
     <Switch>
