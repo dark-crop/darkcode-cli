@@ -64,26 +64,58 @@ const passwordFlow = Effect.fn("Cli.login.password")(function* (root: string) {
     yield* Prompt.password({ message: "Password", validate: (x) => (x ? undefined : "Required") }),
   )
   yield* Prompt.log.info("Authenticating...")
-  const res = yield* Effect.tryPromise({
-    try: () =>
-      fetch(`${root}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username, password }),
-        redirect: "manual",
-      }),
-    catch: (e) => e,
-  }).pipe(Effect.orElseSucceed(() => undefined))
-  if (!res || (res.status !== 303 && res.status !== 302 && res.status !== 200)) {
-    return yield* fail("Login failed - check your username and password.")
-  }
-  yield* Prompt.log.success("Signed in.")
-  yield* Prompt.log.info(
-    "This gateway can't hand a CLI key straight to the terminal, so opening the\n" +
-      "key page in your browser - create a key there, then paste it back here.",
-  )
-  yield* browserPasteFlow(root)
+  const key = yield* Effect.promise(() => loginForKey(root, username, password))
+  if (!key) return yield* fail("Login failed - check your username and password.")
+  yield* Prompt.log.info("Validating key...")
+  if (!(yield* validateKey(root, key))) return yield* fail("The gateway accepted the login but the key was rejected.")
+  yield* storeKey(key)
+  yield* Prompt.log.success("Signed in - key saved.")
 })
+
+/**
+ * Log in with username/password and return a usable sk- key. LiteLLM's /login sets a
+ * signed `token` cookie whose JWT payload embeds a real key; extract it and (best effort)
+ * mint a durable, named key from it. Returns null on failure.
+ */
+async function loginForKey(root: string, username: string, password: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${root}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username, password }),
+      redirect: "manual",
+    })
+    if (![200, 302, 303].includes(res.status)) return null
+    const cookies: string[] =
+      typeof res.headers.getSetCookie === "function"
+        ? res.headers.getSetCookie()
+        : [res.headers.get("set-cookie") ?? ""].filter(Boolean)
+    const jwt = cookies
+      .find((c) => c.startsWith("token="))
+      ?.split(";")[0]
+      ?.slice("token=".length)
+    if (!jwt) return null
+    const payloadB64 = jwt.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/")
+    if (!payloadB64) return null
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64").toString("utf-8")) as { key?: string }
+    const sessionKey = payload.key
+    if (!sessionKey) return null
+    try {
+      const gen = await fetch(`${root}/key/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ key_alias: `darkcode-${username}-${Date.now()}` }),
+      })
+      if (gen.ok) {
+        const data = (await gen.json()) as { key?: string }
+        if (data.key) return data.key
+      }
+    } catch {}
+    return sessionKey
+  } catch {
+    return null
+  }
+}
 
 /** Method 3: open link. Open the gateway UI, capture the pasted key on loopback. */
 const browserPasteFlow = Effect.fn("Cli.login.browser")(function* (root: string) {

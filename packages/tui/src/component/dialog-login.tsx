@@ -44,6 +44,50 @@ export function DialogLogin() {
     return true
   }
 
+  // Log in with username/password and return a usable sk- key. LiteLLM's /login sets a
+  // signed `token` cookie whose JWT payload embeds a real key; we extract it and (best
+  // effort) mint a durable, named key from it. Returns null on failure.
+  async function loginForKey(username: string, password: string): Promise<string | null> {
+    try {
+      const res = await fetch(`${GATEWAY}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ username, password }),
+        redirect: "manual",
+      })
+      if (![200, 302, 303].includes(res.status)) return null
+      const cookies: string[] =
+        typeof res.headers.getSetCookie === "function"
+          ? res.headers.getSetCookie()
+          : [res.headers.get("set-cookie") ?? ""].filter(Boolean)
+      const jwt = cookies
+        .find((c) => c.startsWith("token="))
+        ?.split(";")[0]
+        ?.slice("token=".length)
+      if (!jwt) return null
+      const payloadB64 = jwt.split(".")[1]?.replace(/-/g, "+").replace(/_/g, "/")
+      if (!payloadB64) return null
+      const payload = JSON.parse(Buffer.from(payloadB64, "base64").toString("utf-8")) as { key?: string }
+      const sessionKey = payload.key
+      if (!sessionKey) return null
+      // Prefer a durable, named key minted from the session key; fall back to it directly.
+      try {
+        const gen = await fetch(`${GATEWAY}/key/generate`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${sessionKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ key_alias: `darkcode-${username}-${Date.now()}` }),
+        })
+        if (gen.ok) {
+          const data = (await gen.json()) as { key?: string }
+          if (data.key) return data.key
+        }
+      } catch {}
+      return sessionKey
+    } catch {
+      return null
+    }
+  }
+
   async function tokenFlow() {
     const key = await DialogPrompt.show(dialog, "Paste your Dark LLM key", { placeholder: "sk-..." })
     if (!key || !key.trim()) return
@@ -75,25 +119,13 @@ export function DialogLogin() {
     if (!username || !username.trim()) return
     const password = await DialogPrompt.show(dialog, "Password", { placeholder: "password" })
     if (!password) return
-    let ok = false
-    try {
-      const res = await fetch(`${GATEWAY}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ username: username.trim(), password }),
-        redirect: "manual",
-      })
-      ok = res.status === 303 || res.status === 302 || res.status === 200
-    } catch {
-      ok = false
-    }
-    if (!ok) {
+
+    const key = await loginForKey(username.trim(), password)
+    if (!key) {
       toast.show({ variant: "warning", message: "Login failed - check your username and password." })
       return
     }
-    // This gateway can't hand a CLI key straight back, so finish in the browser.
-    toast.show({ variant: "info", message: "Signed in - create a key in the browser and paste it back." })
-    await browserFlow()
+    await storeKey(key)
   }
 
   const options = createMemo(() => [
