@@ -29,16 +29,26 @@ Running your own models should not mean settling for a worse agent. darkcode kee
 
 ## Installation
 
-darkcode is not on a package registry yet. Build it from source:
+darkcode is not on a package registry yet — run it from source with [Bun](https://bun.sh):
 
 ```bash
 git clone https://github.com/chatthong/darkcode.git
 cd darkcode
 bun install
-bun run packages/opencode/src/index.ts --help   # run from source
+bun run packages/opencode/src/index.ts --help   # verify it runs
 ```
 
-> Requires [Bun](https://bun.sh). A packaged `darkcode` binary and installers are on the roadmap.
+That last line runs darkcode directly. To get a `darkcode` **command** on your PATH (so `darkcode`, `darkcode login`, etc. work), add a shell function pointing at your clone:
+
+```bash
+# from inside the darkcode/ directory:
+echo "darkcode() { bun run \"$(pwd)/packages/opencode/src/index.ts\" \"\$@\"; }" >> ~/.zshrc
+source ~/.zshrc      # or open a new terminal
+
+darkcode --help      # now works from anywhere
+```
+
+> `bun install` alone does **not** create a `darkcode` binary — the `bin` launcher expects a compiled build. The shell function above is the simplest way to run from source. A packaged `darkcode` binary (`bun run --cwd packages/opencode build`) and installers are on the roadmap.
 
 ## Quick start
 
