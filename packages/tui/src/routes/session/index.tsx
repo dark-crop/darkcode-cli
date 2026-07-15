@@ -1530,15 +1530,22 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
 
+  // Show the answer first, then reasoning ("Thought: …") summaries below it.
+  const orderedParts = createMemo(() => {
+    const rest = props.parts.filter((p) => p.type !== "reasoning")
+    const reasoning = props.parts.filter((p) => p.type === "reasoning")
+    return [...rest, ...reasoning]
+  })
+
   return (
     <>
-      <For each={props.parts}>
+      <For each={orderedParts()}>
         {(part, index) => {
           const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
           return (
             <Show when={component()}>
               <Dynamic
-                last={index() === props.parts.length - 1}
+                last={index() === orderedParts().length - 1}
                 component={component()}
                 part={part as any}
                 message={props.message}
