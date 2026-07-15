@@ -82,6 +82,7 @@ import { getRevertDiffFiles } from "../../util/revert-diff"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
 import { LocationProvider } from "../../context/location"
+import { Header } from "../../component/header"
 
 addDefaultParsers(parsers.parsers)
 
@@ -1162,6 +1163,10 @@ export function Session() {
           tui: tuiConfig,
         }}
       >
+        <box flexDirection="column" flexGrow={1} minHeight={0}>
+        <box paddingLeft={2} paddingRight={2}>
+          <Header />
+        </box>
         <box flexDirection="row" flexGrow={1} minHeight={0}>
           <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
             <Show when={session()}>
@@ -1341,6 +1346,7 @@ export function Session() {
               </Match>
             </Switch>
           </Show>
+        </box>
         </box>
       </context.Provider>
     </LocationProvider>
