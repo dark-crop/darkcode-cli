@@ -95,7 +95,8 @@ export function DialogLogin() {
   }
 
   async function browserFlow() {
-    const url = `${GATEWAY}/ui`
+    // Deep-link straight to the Virtual Keys page (create-key), not the generic dashboard.
+    const url = `${GATEWAY}/ui/?page=api-keys`
     // Try to open it, but always SHOW the URL so it can be copied (auto-open may fail
     // or land in the wrong browser profile).
     await open(url).catch(() => undefined)
