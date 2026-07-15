@@ -43,6 +43,7 @@ import { DialogLane } from "./component/dialog-lane"
 import { DialogEffort } from "./component/dialog-effort"
 import { DialogLogin } from "./component/dialog-login"
 import { DialogContext } from "./component/dialog-context"
+import { DARK_LLM_PROVIDER_ID } from "./util/dark-llm"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
@@ -637,6 +638,22 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "login",
         run: () => {
           dialog.replace(() => <DialogLogin />)
+        },
+      },
+      {
+        name: "darkllm.logout",
+        title: "Sign out of Dark LLM",
+        category: "Agent",
+        slashName: "logout",
+        run: async () => {
+          try {
+            await sdk.client.auth.remove({ providerID: DARK_LLM_PROVIDER_ID })
+            await sdk.client.instance.dispose()
+            await sync.bootstrap()
+            toast.show({ variant: "info", message: "Signed out of Dark LLM." })
+          } catch {
+            toast.show({ variant: "warning", message: "Sign out failed." })
+          }
         },
       },
       {
