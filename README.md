@@ -35,20 +35,20 @@ darkcode is not on a package registry yet — run it from source with [Bun](http
 git clone https://github.com/chatthong/darkcode.git
 cd darkcode
 bun install
-bun run packages/opencode/src/index.ts --help   # verify it runs
+./darkcode --help          # run it — works immediately
 ```
 
-That last line runs darkcode directly. To get a `darkcode` **command** on your PATH (so `darkcode`, `darkcode login`, etc. work), add a shell function pointing at your clone:
+The repo ships a `./darkcode` launcher, so there is no build step. To use it from any project, put it on your PATH:
 
 ```bash
-# from inside the darkcode/ directory:
-echo "darkcode() { bun run \"$(pwd)/packages/opencode/src/index.ts\" \"\$@\"; }" >> ~/.zshrc
-source ~/.zshrc      # or open a new terminal
+# symlink onto PATH (keeps auto-updating with `git pull`):
+sudo ln -s "$(pwd)/darkcode" /usr/local/bin/darkcode
 
-darkcode --help      # now works from anywhere
+darkcode --help            # now works from anywhere
+cd ~/my-project && darkcode # operates on your current directory
 ```
 
-> `bun install` alone does **not** create a `darkcode` binary — the `bin` launcher expects a compiled build. The shell function above is the simplest way to run from source. A packaged `darkcode` binary (`bun run --cwd packages/opencode build`) and installers are on the roadmap.
+> **Why a launcher and not `bun run src/index.ts`?** darkcode's TUI uses SolidJS JSX, which Bun only transforms with the `@opentui/solid` preload active. The `./darkcode` script wires that up while keeping *your* working directory as the project. Running the entry file directly will fail with `Cannot find module 'react/jsx-dev-runtime'`. A packaged binary (`bun run --cwd packages/opencode build`) and installers are on the roadmap.
 
 ## Quick start
 

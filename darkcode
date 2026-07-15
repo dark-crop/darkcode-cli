@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# darkcode — run-from-source launcher.
+#
+# The TUI is built with SolidJS JSX, which Bun only transforms when the
+# @opentui/solid preload is active. Bun reads a `preload` from bunfig.toml in
+# its working directory, but that ties the process cwd to packages/opencode and
+# would make darkcode treat the source tree as your project. Instead we resolve
+# the preload to an absolute path and pass it with --preload, so Bun keeps YOUR
+# current directory as the project.
+#
+# Works from any directory once this file is on your PATH (see README).
+set -euo pipefail
+
+# Directory of this script = the repo root (resolve symlinks so a PATH symlink works).
+src="${BASH_SOURCE[0]}"
+while [ -h "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ $src != /* ]] && src="$dir/$src"
+done
+ROOT="$(cd -P "$(dirname "$src")" && pwd)"
+OC="$ROOT/packages/opencode"
+
+if [ ! -d "$OC/node_modules" ] && [ ! -d "$ROOT/node_modules" ]; then
+  echo "darkcode: dependencies not installed. Run 'bun install' in $ROOT first." >&2
+  exit 1
+fi
+
+preload="$(cd "$OC" && bun -e 'process.stdout.write(import.meta.resolveSync("@opentui/solid/preload"))' 2>/dev/null || true)"
+if [ -z "$preload" ]; then
+  echo "darkcode: could not resolve @opentui/solid/preload (is 'bun install' complete?)." >&2
+  exit 1
+fi
+
+exec bun --preload "$preload" "$OC/src/index.ts" "$@"
