@@ -51,16 +51,16 @@ function tieredModels(
   const reasoningTiers = new Set(opts.reasoningTiers ?? [])
   const out: Record<string, BuiltinModel> = {}
   for (const tier of TIERS) {
-    out[`${family}-${tier.key}`] = textModel(`${label} (${tier.key})`, family, tier, reasoningTiers.has(tier.key))
+    out[`${family}-${tier.key}`] = textModel(`${label} · ${tier.key}`, family, tier, reasoningTiers.has(tier.key))
   }
   return out
 }
 
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
-    ...tieredModels("chang-code", "Chang Code", { reasoningTiers: ["high", "ultra"] }),
-    ...tieredModels("singto-fast", "Singto Fast"),
-    ...tieredModels("talay-agent", "Talay Agent", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("chang-code", "Chang", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("singto-fast", "Singto"),
+    ...tieredModels("talay-agent", "Talay", { reasoningTiers: ["high", "ultra"] }),
     "z-image": {
       name: "Z Image",
       family: "z-image",

@@ -40,6 +40,8 @@ import { LocationProvider } from "./context/location"
 import { LocalProvider, useLocal } from "./context/local"
 import { PermissionProvider } from "./context/permission"
 import { DialogModel } from "./component/dialog-model"
+import { DialogLane } from "./component/dialog-lane"
+import { DialogEffort } from "./component/dialog-effort"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
@@ -626,6 +628,26 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           local.session.quickSwitch(i + 1)
         },
       })),
+      {
+        name: "model.lane",
+        title: "Switch model lane (Singto / Chang / Talay)",
+        suggested: true,
+        category: "Agent",
+        slashName: "model",
+        run: () => {
+          dialog.replace(() => <DialogLane />)
+        },
+      },
+      {
+        name: "model.effort",
+        title: "Switch effort (low / med / high / ultra)",
+        suggested: true,
+        category: "Agent",
+        slashName: "effort",
+        run: () => {
+          dialog.replace(() => <DialogEffort />)
+        },
+      },
       {
         name: "model.list",
         title: "Switch model",
