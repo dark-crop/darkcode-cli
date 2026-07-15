@@ -75,9 +75,6 @@ export function Home() {
             <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
           </pluginRuntime.Slot>
         </box>
-        <box paddingLeft={2} paddingRight={2}>
-          <pluginRuntime.Slot name="home_bottom" />
-        </box>
         <Toast />
       </box>
       <box width="100%" flexShrink={0}>

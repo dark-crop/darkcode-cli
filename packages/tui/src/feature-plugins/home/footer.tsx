@@ -66,8 +66,6 @@ function View(props: { api: TuiPluginApi }) {
   return (
     <box
       width="100%"
-      paddingTop={1}
-      paddingBottom={1}
       paddingLeft={2}
       paddingRight={2}
       flexDirection="row"
