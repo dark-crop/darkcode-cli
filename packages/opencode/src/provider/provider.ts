@@ -3,6 +3,12 @@ import os from "os"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import fuzzysort from "fuzzysort"
 import { Config } from "@/config/config"
+import {
+  DARK_LLM_PROVIDER_ID,
+  DARK_LLM_BASE_URL,
+  DARK_LLM_ENV_KEY,
+  darkLlmModelFor,
+} from "@/config/builtin-provider"
 import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Npm } from "@opencode-ai/core/npm"
@@ -1609,6 +1615,39 @@ const layer = Layer.effect(
               }
             } catch (e) {}
           })
+        }
+
+        // darkcode: refresh the dark-llm model list live from the gateway so /model shows
+        // exactly what the signed-in key is allowed. Reconciles against the static built-in
+        // set (keeps rich metadata for known ids, drops ids the gateway doesn't expose, adds
+        // unknown ones). Falls back to the static set on any error — offline, no key, timeout.
+        const darkllm = ProviderV2.ID.make(DARK_LLM_PROVIDER_ID)
+        if (providers[darkllm] && isProviderAllowed(darkllm)) {
+          const cred = yield* auth.get(darkllm).pipe(Effect.orElseSucceed(() => undefined))
+          const envAll = yield* Effect.orElseSucceed(env.all(), () => ({}) as Record<string, string>)
+          const key = cred?.type === "api" ? cred.key : envAll[DARK_LLM_ENV_KEY]
+          if (key) {
+            const base = DARK_LLM_BASE_URL.replace(/\/+$/, "")
+            const url = base.endsWith("/v1") ? `${base}/models` : `${base}/v1/models`
+            yield* Effect.promise(async () => {
+              try {
+                const ctrl = new AbortController()
+                const timer = setTimeout(() => ctrl.abort(), 4000)
+                const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, signal: ctrl.signal })
+                clearTimeout(timer)
+                if (!res.ok) return
+                const body = (await res.json()) as { data?: Array<{ id?: string }> }
+                const ids = (body.data ?? [])
+                  .map((m) => m.id)
+                  .filter((id): id is string => !!id && !id.includes("embed"))
+                if (!ids.length) return
+                const returned = new Set(ids)
+                const models = providers[darkllm].models
+                for (const id of Object.keys(models)) if (!returned.has(id)) delete models[id]
+                for (const id of ids) if (!models[id]) models[id] = darkLlmModelFor(id) as (typeof models)[string]
+              } catch {}
+            })
+          }
         }
 
         for (const [id, provider] of Object.entries(providers)) {

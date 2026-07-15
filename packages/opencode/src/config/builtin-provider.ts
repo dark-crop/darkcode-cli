@@ -74,6 +74,41 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   }
 }
 
+const LANE_LABELS: Record<string, string> = {
+  "chang-code": "Chang",
+  "singto-fast": "Singto",
+  "talay-agent": "Talay",
+}
+
+/** Human display name for a gateway model id (e.g. "chang-code-med" -> "Chang · med"). */
+export function darkLlmDisplayName(id: string): string {
+  for (const [family, label] of Object.entries(LANE_LABELS)) {
+    if (id.startsWith(family + "-")) return `${label} · ${id.slice(family.length + 1)}`
+  }
+  return id
+}
+
+/**
+ * Model entry for a gateway-reported id. Reuses the rich static definition when the
+ * id is one we know; otherwise derives a reasonable entry so live-discovered models
+ * still appear in the picker.
+ */
+export function darkLlmModelFor(id: string): BuiltinModel {
+  const known = darkLlmModels()[id]
+  if (known) return known
+  return {
+    name: darkLlmDisplayName(id),
+    family: id.replace(/-(low|med|high|ultra)$/, ""),
+    release_date: RELEASE_DATE,
+    attachment: false,
+    reasoning: /-(high|ultra)$/.test(id),
+    temperature: true,
+    tool_call: true,
+    limit: { context: 128_000, output: 8_192 },
+    modalities: { input: ["text"], output: ["text"] },
+  }
+}
+
 /** Built-in config layer seeded as the lowest-priority base before any user config is merged in. */
 export function darkLlmBuiltinConfig(): ConfigV1.Info {
   return {
