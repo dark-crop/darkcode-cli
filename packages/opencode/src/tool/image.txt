@@ -1,0 +1,7 @@
+Generate an image from a text prompt, or edit existing image(s), using the Dark-LLM gateway. Use this whenever the user asks to create, generate, draw, make, or edit an image / picture / icon / logo / diagram / mockup.
+
+Two modes:
+- GENERATE (text-to-image): provide `prompt` describing the image. Optionally `size` (e.g. "1024x1024"). Backed by the z-image model (~24s).
+- EDIT (image-to-image): provide `prompt` (the change to make) AND `images` (1-3 absolute paths to existing input image files). Backed by qwen-image-edit (~2.5 min).
+
+If the user references existing image files to modify, use EDIT; otherwise GENERATE. The result is saved as a PNG in the workspace and the tool returns the saved path(s). Do not describe an imaginary image - actually call this tool to produce the file.

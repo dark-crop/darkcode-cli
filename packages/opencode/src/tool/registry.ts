@@ -13,6 +13,8 @@ import { TaskTool } from "./task"
 import { Database } from "@opencode-ai/core/database/database"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
+import { ImageTool } from "./image"
+import { Auth } from "@/auth"
 import { WriteTool } from "./write"
 import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
@@ -101,6 +103,7 @@ const layer = Layer.effect(
     const lsptool = yield* LspTool
     const plan = yield* PlanExitTool
     const webfetch = yield* WebFetchTool
+    const imagetool = yield* ImageTool
     const websearch = yield* WebSearchTool
     const shell = yield* ShellTool
     const globtool = yield* GlobTool
@@ -211,6 +214,7 @@ const layer = Layer.effect(
           write: Tool.init(writetool),
           task: Tool.init(task),
           fetch: Tool.init(webfetch),
+          image: Tool.init(imagetool),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
           skill: Tool.init(skilltool),
@@ -234,6 +238,7 @@ const layer = Layer.effect(
             tool.write,
             tool.task,
             tool.fetch,
+            tool.image,
             tool.todo,
             tool.search,
             tool.skill,
@@ -424,6 +429,7 @@ export const node = LayerNode.make({
   layer,
   deps: [
     Config.node,
+    Auth.node,
     Plugin.node,
     Question.node,
     Todo.node,
