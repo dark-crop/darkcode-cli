@@ -118,7 +118,7 @@ export const ImageTool = Tool.define(
               form.append("prompt", params.prompt)
               for (const s of sources) {
                 const { bytes, filename } = await bytesFrom(s)
-                form.append("image", new Blob([bytes]), filename)
+                form.append("image", new Blob([new Uint8Array(bytes)]), filename)
               }
               resp = await fetch(`${DARK_LLM_BASE_URL}/images/edits`, {
                 method: "POST",
