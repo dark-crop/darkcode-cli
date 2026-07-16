@@ -12,7 +12,7 @@
 
 ---
 
-**darkcode** is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - three model lanes (Singto, Chang, Talay) across four effort tiers (low / med / high / ultra) - and hides every other provider, so a fresh install talks to one gateway and nothing else.
+**darkcode** is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - two chat lanes (Singto, Chang) across four effort tiers (low / med / high / ultra) plus a dedicated vision lane (Ta) - and hides every other provider, so a fresh install talks to one gateway and nothing else.
 
 Its config lives in its own `~/.config/darkcode` directory, so it never touches your opencode setup. The interface is a stripped-down, Claude Code-style TUI: a compact mascot header that scrolls with the chat, a clean divider-framed input, and a single live "working" indicator with a rotating, faintly sassy verb.
 
@@ -21,7 +21,7 @@ Its config lives in its own `~/.config/darkcode` directory, so it never touches 
 ## Highlights
 
 - **One gateway, one provider.** Hard-locked to the built-in `dark-llm` provider. No opencode / openai / anthropic entries ever appear in the picker - `enabled_providers` is forced after all config merges.
-- **Two-axis model control.** Pick the lane with `/model` (Singto / Chang / Talay) and the effort tier with `/effort` (low / med / high / ultra). They compose into `<family>-<tier>`, e.g. `chang-code-med`.
+- **Two-axis model control.** Pick the lane with `/model` (Singto / Chang / Ta) and the effort tier with `/effort` (low / med / high / ultra). The chat lanes compose into `<family>-<tier>`, e.g. `chang-code-med`; the Ta vision lane is a flat `qwen-vl` with no tier.
 - **Live model list.** The picker pulls `GET /v1/models` from the gateway with your signed-in key, so you see exactly what your key is entitled to, and falls back to a static built-in list when offline.
 - **Browser sign-in.** `/login` opens the gateway `/token` page, which mints and shows a key to paste back; `/logout` removes it.
 - **Context at a glance.** `/context` shows context-window usage with a segmented per-category bar, a token breakdown, and running cost.
@@ -73,8 +73,8 @@ Then, inside the TUI:
 
 ```
 /login          # sign in: opens the gateway /token page, paste the key back
-/model          # pick a lane:  Singto (fast) · Chang (coding, default) · Talay (heavy)
-/effort         # pick a tier:  low · med · high · ultra
+/model          # pick a lane:  Singto (fast) · Chang (coding, default) · Ta (vision)
+/effort         # pick a tier:  low · med · high · ultra  (chat lanes only)
 /context        # see context-window usage, token breakdown, and cost
 ```
 
@@ -92,7 +92,9 @@ The built-in `dark-llm` provider exposes **3 lanes** across **4 effort tiers**. 
 | --- | --- | --- | --- |
 | **Singto** | `singto-fast` | 35B MoE | Fast lane - quick answers and cheap fan-out |
 | **Chang** | `chang-code` | 27B dense | Coding + orchestration - the default workhorse |
-| **Talay** | `talay-agent` | 122B | Heavy agent work - the gateway swaps it in alone |
+| **Ta** | `qwen-vl` | Qwen2.5-VL-7B | Vision - reading and reasoning about images |
+
+Singto and Chang carry the four effort tiers below. **Ta** is a purpose-built vision model with a single flat id (`qwen-vl`) and **no effort tiers** - selecting it via `/model` ignores `/effort`.
 
 | Tier | Thinking | Context | Max output |
 | --- | --- | --- | --- |
@@ -101,7 +103,32 @@ The built-in `dark-llm` provider exposes **3 lanes** across **4 effort tiers**. 
 | `high` | on | 200k | 16,384 |
 | `ultra` | on | 256k | 32,768 |
 
-`/model` switches only the lane (keeping your tier) and `/effort` switches only the tier (keeping your lane), so a typical flow is `/model` to Talay, then `/effort` to `ultra`, giving `talay-agent-ultra`. There is no `/models` command - `/model` is the single lane picker.
+`/model` switches only the lane (keeping your tier) and `/effort` switches only the tier (keeping your lane), so a typical flow is `/model` to Chang, then `/effort` to `ultra`, giving `chang-code-ultra`. Switch to **Ta** when you need to read an image. There is no `/models` command - `/model` is the single lane picker.
+
+```mermaid
+flowchart LR
+    U(["you"]) --> DC["darkcode TUI"]
+
+    subgraph control["two-axis control"]
+        direction TB
+        M["/model → lane"]
+        E["/effort → tier"]
+    end
+    DC -.-> control
+
+    DC -->|"Bearer key (/login)"| G{{"Dark-LLM gateway<br/>dark-llm.cropbinary.com"}}
+
+    subgraph lanes["built-in dark-llm provider"]
+        direction TB
+        SG["Singto · singto-fast-*"]
+        CH["Chang · chang-code-* (default)"]
+        TA["Ta · qwen-vl (vision)"]
+    end
+    G --> lanes
+
+    classDef hub fill:#a855f7,stroke:#7c3aed,stroke-width:2px,color:#fff
+    class G hub
+```
 
 The list is **live**. With a signed-in key (or `DARK_LLM_KEY` set), darkcode calls `GET https://dark-llm.cropbinary.com/v1/models` and reconciles the result against the static built-in set (keeping known metadata, dropping ids the gateway does not return, synthesizing unknown ones, filtering out embedding models). Any failure - offline, no key, or a 4s timeout - falls back to the static list, so the picker is never empty.
 
