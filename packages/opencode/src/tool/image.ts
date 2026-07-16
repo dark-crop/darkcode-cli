@@ -1,5 +1,6 @@
 import { Schema, Effect } from "effect"
 import * as path from "path"
+import { fileURLToPath } from "node:url"
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import * as Tool from "./tool"
 import { Auth } from "@/auth"
@@ -12,9 +13,15 @@ export const Parameters = Schema.Struct({
   prompt: Schema.String.annotate({
     description: "Description of the image to generate, or the change to apply when editing.",
   }),
+  mode: Schema.optional(Schema.Literals(["generate", "edit"])).annotate({
+    description:
+      'Set to "edit" to modify an existing image (image-to-image). If the user attached/gave an image in ' +
+      'their message, it is used automatically - no path needed. Omit or "generate" to create a new image.',
+  }),
   images: Schema.optional(Schema.Array(Schema.String)).annotate({
     description:
-      "Optional 1-3 absolute paths to existing input images. If provided, edits them (image-to-image) instead of generating from scratch.",
+      "Optional 1-3 absolute paths to input image files to edit. Usually NOT needed - an image the user " +
+      "attached is picked up automatically in edit mode. Only use this to edit specific files on disk.",
   }),
   size: Schema.optional(Schema.String).annotate({
     description:
@@ -33,6 +40,38 @@ interface ImagesResponse {
   data?: Array<{ b64_json?: string; url?: string }>
 }
 
+// Image file parts the user attached to their most recent message.
+function attachedImages(messages: readonly unknown[]): { url: string; filename?: string }[] {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i] as { info?: { role?: string }; parts?: unknown[] } | undefined
+    if (m?.info?.role !== "user") continue
+    const parts = (m.parts ?? []) as Array<{ type?: string; mime?: string; url?: string; filename?: string }>
+    return parts
+      .filter((p) => p.type === "file" && typeof p.mime === "string" && p.mime.startsWith("image/") && !!p.url)
+      .map((p) => ({ url: p.url as string, filename: p.filename }))
+  }
+  return []
+}
+
+// Resolve an image source (data: URL, http(s) URL, file:// URL, or a plain path) to bytes.
+async function bytesFrom(src: string): Promise<{ bytes: Uint8Array; filename: string }> {
+  if (src.startsWith("data:")) {
+    const comma = src.indexOf(",")
+    const ext = src.slice(5, comma).split(";")[0].split("/")[1] || "png"
+    return { bytes: new Uint8Array(Buffer.from(src.slice(comma + 1), "base64")), filename: `input.${ext}` }
+  }
+  if (src.startsWith("http://") || src.startsWith("https://")) {
+    const r = await fetch(src)
+    if (!r.ok) throw new Error(`Could not fetch the attached image (${r.status}).`)
+    return {
+      bytes: new Uint8Array(await r.arrayBuffer()),
+      filename: path.basename(new URL(src).pathname) || "input.png",
+    }
+  }
+  const p = src.startsWith("file://") ? fileURLToPath(src) : src
+  return { bytes: new Uint8Array(await readFile(p)), filename: path.basename(p) }
+}
+
 export const ImageTool = Tool.define(
   "image",
   Effect.gen(function* () {
@@ -44,27 +83,29 @@ export const ImageTool = Tool.define(
       execute: (params: Params, ctx: Tool.Context) =>
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
-          const inputs = (params.images ?? []).slice(0, 3)
-          const isEdit = inputs.length > 0
           const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(instance.directory, p))
-          const inputAbs = inputs.map(abs)
+          const explicit = (params.images ?? []).slice(0, 3).map(abs)
           const outAbs = params.output ? abs(params.output) : undefined
+
+          // Guard model-chosen file paths (reads + writes) outside the workspace.
+          for (const p of explicit) yield* assertExternalDirectoryEffect(ctx, p)
+          if (outAbs) yield* assertExternalDirectoryEffect(ctx, outAbs)
+
+          // Edit inputs: explicit paths win; otherwise pick up the image the user attached this turn.
+          const attached = explicit.length === 0 && params.mode === "edit" ? attachedImages(ctx.messages).slice(0, 3) : []
+          const sources = explicit.length > 0 ? explicit : attached.map((a) => a.url)
+          const wantEdit = params.mode === "edit" || explicit.length > 0
+          const isEdit = sources.length > 0
+          if (wantEdit && !isEdit)
+            throw new Error("Edit mode needs an image - attach one to your message, or pass file paths in `images`.")
 
           yield* ctx.ask({
             permission: "image",
             patterns: [isEdit ? "edit" : "generate"],
             always: ["*"],
-            metadata: { prompt: params.prompt, mode: isEdit ? "edit" : "generate", images: inputAbs, output: outAbs },
+            metadata: { prompt: params.prompt, mode: isEdit ? "edit" : "generate", inputs: sources.length },
           })
 
-          // The `images` and `output` paths are model-controlled. Gate any file read/write OUTSIDE
-          // the workspace behind the external_directory permission - this stops a prompt-injected
-          // model from reading e.g. ~/.ssh/id_rsa or the auth store and exfiltrating it through the
-          // edit upload, or overwriting an arbitrary file via `output`. In-workspace paths pass silently.
-          for (const p of inputAbs) yield* assertExternalDirectoryEffect(ctx, p)
-          if (outAbs) yield* assertExternalDirectoryEffect(ctx, outAbs)
-
-          // Resolve the signed-in dark-llm key (or the env fallback).
           const info = yield* auth.get(DARK_LLM_PROVIDER_ID).pipe(Effect.orElseSucceed(() => undefined))
           const key = (info && info.type === "api" ? info.key : undefined) ?? process.env[DARK_LLM_ENV_KEY]
           if (!key) throw new Error("Not signed in to Dark LLM - run /login first (or set DARK_LLM_KEY).")
@@ -75,9 +116,9 @@ export const ImageTool = Tool.define(
               const form = new FormData()
               form.append("model", "qwen-image-edit")
               form.append("prompt", params.prompt)
-              for (const p of inputAbs) {
-                const buf = await readFile(p)
-                form.append("image", new Blob([new Uint8Array(buf)]), path.basename(p))
+              for (const s of sources) {
+                const { bytes, filename } = await bytesFrom(s)
+                form.append("image", new Blob([bytes]), filename)
               }
               resp = await fetch(`${DARK_LLM_BASE_URL}/images/edits`, {
                 method: "POST",
@@ -109,10 +150,7 @@ export const ImageTool = Tool.define(
               const dest =
                 outAbs && items.length === 1
                   ? outAbs
-                  : path.join(
-                      instance.directory,
-                      `image-${Date.now()}${items.length > 1 ? "-" + (i + 1) : ""}.png`,
-                    )
+                  : path.join(instance.directory, `image-${Date.now()}${items.length > 1 ? "-" + (i + 1) : ""}.png`)
               await mkdir(path.dirname(dest), { recursive: true })
               await writeFile(dest, Buffer.from(items[i].b64_json!, "base64"))
               out.push(dest)
