@@ -668,7 +668,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "model.lane",
-        title: "Switch model lane (Singto / Chang / Talay)",
+        title: "Switch model lane (Loki / Thor)",
         suggested: true,
         category: "Agent",
         slashName: "model",
