@@ -9,19 +9,29 @@ export const VISION_MODEL_ID = "qwen-vl"
 
 export const LANES = [
   {
-    family: "singto-fast",
-    label: "Singto",
-    description: "fast lane - 35B MoE, quick answers and cheap fan-out",
+    family: "loki-fast",
+    label: "Loki",
+    description: "fast lane - 35B-A3B MoE, quick answers and cheap fan-out",
   },
   {
     family: "chang-code",
     label: "Chang",
-    description: "coding + orchestrator - 27B dense workhorse (default)",
+    description: "coding - 27B (previous default, in bake-off)",
+  },
+  {
+    family: "thor-code",
+    label: "Thor",
+    description: "coding - 27B NEO-CODE (bake-off candidate)",
+  },
+  {
+    family: "odin",
+    label: "Odin",
+    description: "heavy - 40B Deckard (bake-off candidate)",
   },
   {
     family: VISION_MODEL_ID,
     label: "Ta",
-    description: "vision - Qwen2.5-VL-7B, purpose-built to read images (no effort tiers)",
+    description: "vision - Qwen2.5-VL-7B, reads images (no effort tiers)",
   },
 ] as const
 

@@ -59,8 +59,10 @@ function tieredModels(
 
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
+    ...tieredModels("loki-fast", "Loki"),
     ...tieredModels("chang-code", "Chang", { reasoningTiers: ["high", "ultra"] }),
-    ...tieredModels("singto-fast", "Singto"),
+    ...tieredModels("thor-code", "Thor", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("odin", "Odin", { reasoningTiers: ["high", "ultra"] }),
     // Ta - dedicated vision lane (Qwen2.5-VL-7B). Flat id, no effort tiers; reads images.
     "qwen-vl": {
       name: "Ta · vision",
@@ -87,8 +89,10 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
 }
 
 const LANE_LABELS: Record<string, string> = {
+  "loki-fast": "Loki",
   "chang-code": "Chang",
-  "singto-fast": "Singto",
+  "thor-code": "Thor",
+  "odin": "Odin",
 }
 
 /** Human display name for a gateway model id (e.g. "chang-code-med" -> "Chang · med"). */
