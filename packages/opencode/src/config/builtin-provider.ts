@@ -61,7 +61,18 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
     ...tieredModels("chang-code", "Chang", { reasoningTiers: ["high", "ultra"] }),
     ...tieredModels("singto-fast", "Singto"),
-    ...tieredModels("talay-agent", "Talay", { reasoningTiers: ["high", "ultra"] }),
+    // Ta - dedicated vision lane (Qwen2.5-VL-7B). Flat id, no effort tiers; reads images.
+    "qwen-vl": {
+      name: "Ta · vision",
+      family: "qwen-vl",
+      release_date: RELEASE_DATE,
+      attachment: true,
+      reasoning: false,
+      temperature: true,
+      tool_call: true,
+      limit: { context: 32_000, output: 8_192 },
+      modalities: { input: ["text", "image"], output: ["text"] },
+    },
     "z-image": {
       name: "Z Image",
       family: "z-image",
@@ -78,11 +89,11 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
 const LANE_LABELS: Record<string, string> = {
   "chang-code": "Chang",
   "singto-fast": "Singto",
-  "talay-agent": "Talay",
 }
 
 /** Human display name for a gateway model id (e.g. "chang-code-med" -> "Chang · med"). */
 export function darkLlmDisplayName(id: string): string {
+  if (id === "qwen-vl") return "Ta · vision"
   for (const [family, label] of Object.entries(LANE_LABELS)) {
     if (id.startsWith(family + "-")) return `${label} · ${id.slice(family.length + 1)}`
   }
