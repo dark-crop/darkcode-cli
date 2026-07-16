@@ -28,8 +28,17 @@ What happens when you run it:
 
 1. darkcode opens the gateway's **`/token`** page in your default browser
    (`https://dark-llm.cropbinary.com/token`).
-2. You sign in on that page. It is a login callback that **mints and displays a
-   darkcode key** for you to copy.
+2. That page is a self-contained login: it shows a **username + password form directly
+   on the `/token` page** — no new tab, no polling, no LiteLLM dashboard. On submit it
+   POSTs your credentials same-origin to LiteLLM's `/login` using `fetch` with
+   `redirect: 'manual'`, so LiteLLM sets its readable `token` cookie **without the page
+   ever navigating to the dashboard** (LiteLLM still 302-redirects, but the fetch never
+   follows it). Wrong credentials produce an inline error so you can retry in place. On
+   success the page reads the `token` cookie (a JWT), decodes the session key, calls
+   `POST /key/generate` (`key_alias: darkcode-<timestamp>`) to mint a scoped darkcode
+   key, and **displays it with a Copy button**. A **Sign out** button clears the session
+   cookie (best-effort `/sso/logout` too) and returns to the login form — handy on
+   shared machines.
 3. Back in the TUI, a prompt is waiting: *"Sign in in the browser, then paste your
    token below."* Paste the `sk-...` key and press enter.
 4. darkcode validates the key by calling `GET /v1/models` with it as a bearer token. If
@@ -40,8 +49,10 @@ What happens when you run it:
 The `/token` link is printed inside the dialog as well, so if the browser did not open
 automatically you can click the link (or copy it) to reach the same page.
 
-There is no username/password or manual dashboard step. The single sign-in path is the
-`/token` page, which handles login and hands back a ready-to-use key.
+The `/token` page is served by comfyui-bridge (the `TOKEN_PAGE` constant, `/token`
+route) and exposed through the LiteLLM `/token` passthrough (`auth: false`), styled in
+brand purple `#a855f7`. The master key never leaves the box, and the CLI never handles
+your password: it is entered in the browser and posted to LiteLLM directly.
 
 ## `/logout`
 

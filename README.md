@@ -137,7 +137,7 @@ See [docs/models.md](docs/models.md) for the full lane/tier reference and the li
 `/login` is a **browser-only** flow:
 
 1. It opens the gateway's `/token` page (`https://dark-llm.cropbinary.com/token`) in your default browser. The link is also printed in the dialog if the browser does not open.
-2. You sign in there. The page mints and displays a darkcode key (`sk-...`).
+2. You sign in **on that page itself** - it shows a username + password form, with no new tab and no gateway dashboard to land on. On success it mints and displays a darkcode key (`sk-...`); wrong credentials show an inline error so you can retry in place. A **Sign out** button on the page clears the session again, handy on shared machines.
 3. Paste the key back into the waiting prompt. darkcode validates it against `GET /v1/models` and, if the gateway accepts it, stores it and shows *"Signed in to Dark LLM."*
 
 `/logout` removes the stored `dark-llm` credential and returns you to a signed-out state.
