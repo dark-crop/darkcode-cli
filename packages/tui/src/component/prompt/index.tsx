@@ -1338,7 +1338,7 @@ export function Prompt(props: PromptProps) {
     <>
       <box ref={(r: BoxRenderable) => (anchor = r)} visible={props.visible !== false} width="100%">
         <box width="100%" border={["top"]} borderColor={theme.border}>
-          <box paddingLeft={2} paddingRight={2} paddingTop={1} flexShrink={0} flexGrow={1} width="100%">
+          <box paddingLeft={2} paddingRight={2} flexShrink={0} flexGrow={1} width="100%">
             <box flexDirection="row" gap={1} width="100%">
             <text flexShrink={0} fg={theme.primary}>
               ›
