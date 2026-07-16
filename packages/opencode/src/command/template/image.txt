@@ -1,10 +1,1 @@
-Create an image using the `image` tool.
-
-Request: $ARGUMENTS
-
-Call the `image` tool now:
-- If the user attached/gave an image and wants it changed/edited, use mode:"edit" (the attached image is used automatically - no path needed).
-- If the request names existing image file(s) on disk to modify, use mode:"edit" and pass their paths as `images`.
-- Otherwise generate from the description.
-
-Save the result to the workspace. Do not just describe the image - actually call the tool to produce the file.
+Generate or edit an image with the `image` tool (edit the attached image if one is given): $ARGUMENTS
