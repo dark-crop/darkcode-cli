@@ -14,19 +14,9 @@ export const LANES = [
     description: "fast lane - 35B-A3B MoE, quick answers and cheap fan-out",
   },
   {
-    family: "chang-code",
-    label: "Chang",
-    description: "coding - 27B (previous default, in bake-off)",
-  },
-  {
-    family: "thor-code",
+    family: "thor",
     label: "Thor",
-    description: "coding - 27B NEO-CODE (bake-off candidate)",
-  },
-  {
-    family: "odin",
-    label: "Odin",
-    description: "heavy - 40B Deckard (bake-off candidate)",
+    description: "coding - 27B, the default workhorse (also thor-1m-* for ~1M context)",
   },
   {
     family: VISION_MODEL_ID,

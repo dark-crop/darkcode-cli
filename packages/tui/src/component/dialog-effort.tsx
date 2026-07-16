@@ -18,7 +18,7 @@ export function DialogEffort() {
       description: t.description,
       onSelect: () => {
         dialog.clear()
-        local.model.set(composeDarkLlmModel(parsed()?.family ?? "chang-code", t.tier), { recent: true })
+        local.model.set(composeDarkLlmModel(parsed()?.family ?? "thor", t.tier), { recent: true })
       },
     })),
   )

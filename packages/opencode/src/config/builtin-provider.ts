@@ -9,7 +9,7 @@ import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
  */
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "chang-code-med"
+export const DARK_LLM_DEFAULT_MODEL_ID = "thor-med"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 
 type BuiltinModel = NonNullable<ConfigV1.Info["provider"]>[string]["models"] extends infer M
@@ -60,9 +60,7 @@ function tieredModels(
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
     ...tieredModels("loki-fast", "Loki"),
-    ...tieredModels("chang-code", "Chang", { reasoningTiers: ["high", "ultra"] }),
-    ...tieredModels("thor-code", "Thor", { reasoningTiers: ["high", "ultra"] }),
-    ...tieredModels("odin", "Odin", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("thor", "Thor", { reasoningTiers: ["high", "ultra"] }),
     // Ta - dedicated vision lane (Qwen2.5-VL-7B). Flat id, no effort tiers; reads images.
     "qwen-vl": {
       name: "Ta · vision",
@@ -90,9 +88,7 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
 
 const LANE_LABELS: Record<string, string> = {
   "loki-fast": "Loki",
-  "chang-code": "Chang",
-  "thor-code": "Thor",
-  "odin": "Odin",
+  "thor": "Thor",
 }
 
 /** Human display name for a gateway model id (e.g. "chang-code-med" -> "Chang · med"). */
