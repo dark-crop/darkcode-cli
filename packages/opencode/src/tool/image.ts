@@ -5,6 +5,7 @@ import * as Tool from "./tool"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { DARK_LLM_BASE_URL, DARK_LLM_PROVIDER_ID, DARK_LLM_ENV_KEY } from "@/config/builtin-provider"
+import { assertExternalDirectoryEffect } from "./external-directory"
 import DESCRIPTION from "./image.txt"
 
 export const Parameters = Schema.Struct({
@@ -43,13 +44,22 @@ export const ImageTool = Tool.define(
           const inputs = (params.images ?? []).slice(0, 3)
           const isEdit = inputs.length > 0
           const abs = (p: string) => (path.isAbsolute(p) ? p : path.join(instance.directory, p))
+          const inputAbs = inputs.map(abs)
+          const outAbs = params.output ? abs(params.output) : undefined
 
           yield* ctx.ask({
             permission: "image",
-            patterns: [params.prompt.slice(0, 80)],
+            patterns: [isEdit ? "edit" : "generate"],
             always: ["*"],
-            metadata: { prompt: params.prompt, mode: isEdit ? "edit" : "generate", images: inputs },
+            metadata: { prompt: params.prompt, mode: isEdit ? "edit" : "generate", images: inputAbs, output: outAbs },
           })
+
+          // The `images` and `output` paths are model-controlled. Gate any file read/write OUTSIDE
+          // the workspace behind the external_directory permission - this stops a prompt-injected
+          // model from reading e.g. ~/.ssh/id_rsa or the auth store and exfiltrating it through the
+          // edit upload, or overwriting an arbitrary file via `output`. In-workspace paths pass silently.
+          for (const p of inputAbs) yield* assertExternalDirectoryEffect(ctx, p)
+          if (outAbs) yield* assertExternalDirectoryEffect(ctx, outAbs)
 
           // Resolve the signed-in dark-llm key (or the env fallback).
           const info = yield* auth.get(DARK_LLM_PROVIDER_ID).pipe(Effect.orElseSucceed(() => undefined))
@@ -62,8 +72,8 @@ export const ImageTool = Tool.define(
               const form = new FormData()
               form.append("model", "qwen-image-edit")
               form.append("prompt", params.prompt)
-              for (const p of inputs) {
-                const buf = await readFile(abs(p))
+              for (const p of inputAbs) {
+                const buf = await readFile(p)
                 form.append("image", new Blob([new Uint8Array(buf)]), path.basename(p))
               }
               resp = await fetch(`${DARK_LLM_BASE_URL}/images/edits`, {
@@ -94,8 +104,8 @@ export const ImageTool = Tool.define(
             const out: string[] = []
             for (let i = 0; i < items.length; i++) {
               const dest =
-                params.output && items.length === 1
-                  ? abs(params.output)
+                outAbs && items.length === 1
+                  ? outAbs
                   : path.join(
                       instance.directory,
                       `image-${Date.now()}${items.length > 1 ? "-" + (i + 1) : ""}.png`,
