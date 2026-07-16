@@ -34,12 +34,13 @@ function textModel(name: string, family: string, tier: (typeof TIERS)[number], r
     name,
     family,
     release_date: RELEASE_DATE,
-    attachment: false,
+    // The chat lanes are vision-capable (llama.cpp mmproj projector), so they accept images.
+    attachment: true,
     reasoning,
     temperature: true,
     tool_call: true,
     limit: { context: tier.context, output: tier.output },
-    modalities: { input: ["text"], output: ["text"] },
+    modalities: { input: ["text", "image"], output: ["text"] },
   }
 }
 
@@ -100,12 +101,12 @@ export function darkLlmModelFor(id: string): BuiltinModel {
     name: darkLlmDisplayName(id),
     family: id.replace(/-(low|med|high|ultra)$/, ""),
     release_date: RELEASE_DATE,
-    attachment: false,
+    attachment: true,
     reasoning: /-(high|ultra)$/.test(id),
     temperature: true,
     tool_call: true,
     limit: { context: 128_000, output: 8_192 },
-    modalities: { input: ["text"], output: ["text"] },
+    modalities: { input: ["text", "image"], output: ["text"] },
   }
 }
 
