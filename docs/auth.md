@@ -108,7 +108,7 @@ points relevant to auth:
 | Display name | `Dark LLM` |
 | Base URL | `https://dark-llm.cropbinary.com/v1` |
 | Credential env var | `DARK_LLM_KEY` |
-| Default model | `dark-llm/chang-code-med` |
+| Default model | `dark-llm/thor-med` |
 
 The provider is defined in `packages/opencode/src/config/builtin-provider.ts` and is
 always autoloaded. darkcode is **hard-locked** to this single provider, so no other
