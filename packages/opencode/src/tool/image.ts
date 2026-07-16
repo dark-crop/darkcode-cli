@@ -17,7 +17,10 @@ export const Parameters = Schema.Struct({
       "Optional 1-3 absolute paths to existing input images. If provided, edits them (image-to-image) instead of generating from scratch.",
   }),
   size: Schema.optional(Schema.String).annotate({
-    description: 'Optional image size like "1024x1024" (generate mode only).',
+    description:
+      'Optional pixel size "WxH" (generate mode only). Translate the user\'s requested ratio/orientation ' +
+      "into pixels near ~1 megapixel: square/1:1 = 1024x1024, landscape/16:9 = 1344x768, portrait/9:16 = " +
+      "768x1344, 3:2 = 1216x832, 2:3 = 832x1216, 4:3 = 1152x896, 3:4 = 896x1152. Default 1024x1024.",
   }),
   output: Schema.optional(Schema.String).annotate({
     description: "Optional output file path (.png). Defaults to a timestamped file in the workspace root.",
