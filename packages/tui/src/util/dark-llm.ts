@@ -15,6 +15,11 @@ export const LANES = [
     label: "Thor",
     description: "the workhorse",
   },
+  {
+    family: "thor-1m",
+    label: "Thor 1M",
+    description: "huge context (slow to load)",
+  },
 ] as const
 
 export const TIERS = [

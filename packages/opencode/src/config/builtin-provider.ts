@@ -61,6 +61,7 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
     ...tieredModels("loki", "Loki"),
     ...tieredModels("thor", "Thor", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("thor-1m", "Thor 1M", { reasoningTiers: ["high", "ultra"] }),
     "z-image": {
       name: "Z Image",
       family: "z-image",
@@ -74,8 +75,11 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   }
 }
 
+// "thor-1m" MUST come before "thor" so darkLlmDisplayName matches the longer prefix first
+// (otherwise "thor-1m-med" would match "thor-" and render as "Thor · 1m-med").
 const LANE_LABELS: Record<string, string> = {
   "loki": "Loki",
+  "thor-1m": "Thor 1M",
   "thor": "Thor",
 }
 
