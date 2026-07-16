@@ -3,25 +3,17 @@
 // packages/opencode/src/config/builtin-provider.ts.
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 
-// The vision lane (Qwen2.5-VL) is a single flat model id with no effort tiers, so it is
-// not a `<family>-<tier>` pair. `VISION_MODEL_ID` is both its family key and its model id.
-export const VISION_MODEL_ID = "qwen-vl"
-
+// Every chat lane reads images via its own mmproj, so there is no separate vision lane.
 export const LANES = [
   {
     family: "loki",
     label: "Loki",
-    description: "fast lane - 35B-A3B MoE, quick answers and cheap fan-out",
+    description: "quick and cheap",
   },
   {
     family: "thor",
     label: "Thor",
-    description: "coding - 27B, the default workhorse (also thor-1m-* for ~1M context)",
-  },
-  {
-    family: VISION_MODEL_ID,
-    label: "Ta",
-    description: "vision - Qwen2.5-VL-7B, reads images (no effort tiers)",
+    description: "the workhorse",
   },
 ] as const
 
@@ -37,8 +29,6 @@ export type Tier = (typeof TIERS)[number]["tier"]
 
 export function parseDarkLlmModel(model: { providerID: string; modelID: string } | undefined) {
   if (!model || model.providerID !== DARK_LLM_PROVIDER_ID) return undefined
-  // Vision lane: a flat id, no tier.
-  if (model.modelID === VISION_MODEL_ID) return { family: VISION_MODEL_ID as Lane, tier: undefined }
   for (const lane of LANES) {
     const prefix = lane.family + "-"
     if (model.modelID.startsWith(prefix)) {
@@ -50,7 +40,5 @@ export function parseDarkLlmModel(model: { providerID: string; modelID: string }
 }
 
 export function composeDarkLlmModel(family: Lane, tier: Tier) {
-  // The vision lane ignores the effort tier (it has none), so /effort is a no-op on it.
-  if (family === VISION_MODEL_ID) return { providerID: DARK_LLM_PROVIDER_ID, modelID: VISION_MODEL_ID }
   return { providerID: DARK_LLM_PROVIDER_ID, modelID: `${family}-${tier}` }
 }
