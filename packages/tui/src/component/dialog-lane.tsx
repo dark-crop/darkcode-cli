@@ -4,7 +4,7 @@ import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
 import { LANES, composeDarkLlmModel, parseDarkLlmModel } from "../util/dark-llm"
 
-/** Lane picker for the built-in dark-llm provider: Singto / Chang / Talay.
+/** Lane picker for the built-in dark-llm provider: Loki / Thor.
  * Keeps the current effort tier (default med) and only switches the lane. */
 export function DialogLane() {
   const local = useLocal()

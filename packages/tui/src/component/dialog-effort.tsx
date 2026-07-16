@@ -5,7 +5,7 @@ import { useDialog } from "../ui/dialog"
 import { TIERS, composeDarkLlmModel, parseDarkLlmModel } from "../util/dark-llm"
 
 /** Effort picker for the built-in dark-llm provider: low / med / high / ultra.
- * Keeps the current lane (default Chang) and only switches the tier. */
+ * Keeps the current lane (default Thor) and only switches the tier. */
 export function DialogEffort() {
   const local = useLocal()
   const dialog = useDialog()
