@@ -59,7 +59,7 @@ function tieredModels(
 
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
-    ...tieredModels("loki-fast", "Loki"),
+    ...tieredModels("loki", "Loki"),
     ...tieredModels("thor", "Thor", { reasoningTiers: ["high", "ultra"] }),
     // Ta - dedicated vision lane (Qwen2.5-VL-7B). Flat id, no effort tiers; reads images.
     "qwen-vl": {
@@ -87,7 +87,7 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
 }
 
 const LANE_LABELS: Record<string, string> = {
-  "loki-fast": "Loki",
+  "loki": "Loki",
   "thor": "Thor",
 }
 

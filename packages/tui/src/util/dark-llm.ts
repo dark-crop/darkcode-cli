@@ -9,7 +9,7 @@ export const VISION_MODEL_ID = "qwen-vl"
 
 export const LANES = [
   {
-    family: "loki-fast",
+    family: "loki",
     label: "Loki",
     description: "fast lane - 35B-A3B MoE, quick answers and cheap fan-out",
   },
