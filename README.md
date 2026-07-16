@@ -12,7 +12,7 @@
 
 ---
 
-**darkcode** is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - two chat lanes (Loki, Thor) across four effort tiers (low / med / high / ultra) plus a dedicated vision lane (Ta) - and hides every other provider, so a fresh install talks to one gateway and nothing else.
+**darkcode** is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - two chat lanes (Loki, Thor) across four effort tiers (low / med / high / ultra), each reading images directly via its own mmproj projector - and hides every other provider, so a fresh install talks to one gateway and nothing else.
 
 Its config lives in its own `~/.config/darkcode` directory, so it never touches your opencode setup. The interface is a stripped-down, Claude Code-style TUI: a compact mascot header that scrolls with the chat, a clean divider-framed input, and a single live "working" indicator with a rotating, faintly sassy verb.
 
@@ -21,7 +21,7 @@ Its config lives in its own `~/.config/darkcode` directory, so it never touches 
 ## Highlights
 
 - **One gateway, one provider.** Hard-locked to the built-in `dark-llm` provider. No opencode / openai / anthropic entries ever appear in the picker - `enabled_providers` is forced after all config merges.
-- **Two-axis model control.** Pick the lane with `/model` (Loki / Thor / Ta) and the effort tier with `/effort` (low / med / high / ultra). The chat lanes compose into `<family>-<tier>`, e.g. `thor-med`; the Ta vision lane is a flat `qwen-vl` with no tier.
+- **Two-axis model control.** Pick the lane with `/model` (Loki / Thor) and the effort tier with `/effort` (low / med / high / ultra). The chat lanes compose into `<family>-<tier>`, e.g. `thor-med`. Both lanes read images directly through their own mmproj projector, so there is no separate vision lane.
 - **Live model list.** The picker pulls `GET /v1/models` from the gateway with your signed-in key, so you see exactly what your key is entitled to, and falls back to a static built-in list when offline.
 - **Browser sign-in.** `/login` opens the gateway `/token` page, which mints and shows a key to paste back; `/logout` removes it.
 - **Context at a glance.** `/context` shows context-window usage with a segmented per-category bar, a token breakdown, and running cost.
@@ -73,8 +73,8 @@ Then, inside the TUI:
 
 ```
 /login          # sign in: opens the gateway /token page, paste the key back
-/model          # pick a lane:  Loki (fast) · Thor (coding, default) · Ta (vision)
-/effort         # pick a tier:  low · med · high · ultra  (chat lanes only)
+/model          # pick a lane:  Loki (fast) · Thor (coding, default) - both read images
+/effort         # pick a tier:  low · med · high · ultra
 /context        # see context-window usage, token breakdown, and cost
 ```
 
@@ -86,15 +86,14 @@ darkcode run --model dark-llm/loki-low "explain this error"
 
 ## Models
 
-The built-in `dark-llm` provider exposes **two chat lanes** plus a vision lane. A chat model id is always `<family>-<tier>` (for example `thor-med`).
+The built-in `dark-llm` provider exposes **two chat lanes**. A chat model id is always `<family>-<tier>` (for example `thor-med`). Both lanes read images directly - each loads its own mmproj projector - so there is no separate vision lane.
 
 | Lane | Family (`<family>`) | Backing model | Best for |
 | --- | --- | --- | --- |
-| **Loki** | `loki` | Qwen3.6-35B-A3B MoE | Fast lane - quick answers and cheap fan-out |
-| **Thor** | `thor` | Qwen3.6-27B HauhauCS | Coding - the default lane |
-| **Ta** | `qwen-vl` | Qwen2.5-VL-7B | Vision - reading and reasoning about images |
+| **Loki** | `loki` | Qwen3.6-35B-A3B MoE | Fast lane - quick answers and cheap fan-out; reads images |
+| **Thor** | `thor` | Qwen3.6-27B HauhauCS | Coding - the default lane; reads images |
 
-Loki and Thor carry the four effort tiers below. **Ta** is a purpose-built vision model with a single flat id (`qwen-vl`) and **no effort tiers** - selecting it via `/model` ignores `/effort`. (Thor also has a ~1M-context variant, `thor-1m`, reached via the `thor-1m-<tier>` ids and selectable with `--model`.)
+Loki and Thor both carry the four effort tiers below. (Thor also has a ~1M-context variant, `thor-1m`, reached via the `thor-1m-<tier>` ids and selectable with `--model`; it reads images too.)
 
 | Tier | Thinking | Context | Max output |
 | --- | --- | --- | --- |
@@ -103,7 +102,7 @@ Loki and Thor carry the four effort tiers below. **Ta** is a purpose-built visio
 | `high` | on | 200k | 16,384 |
 | `ultra` | on | 256k | 32,768 |
 
-`/model` switches only the lane (keeping your tier) and `/effort` switches only the tier (keeping your lane), so a typical flow is `/model` to Thor, then `/effort` to `ultra`, giving `thor-ultra`. Switch to **Ta** when you need to read an image. There is no `/models` command - `/model` is the single lane picker.
+`/model` switches only the lane (keeping your tier) and `/effort` switches only the tier (keeping your lane), so a typical flow is `/model` to Thor, then `/effort` to `ultra`, giving `thor-ultra`. Either lane can read an image directly - no lane switch needed. There is no `/models` command - `/model` is the single lane picker.
 
 ```mermaid
 flowchart LR
@@ -120,9 +119,8 @@ flowchart LR
 
     subgraph lanes["built-in dark-llm provider"]
         direction TB
-        SG["Loki · loki-*"]
-        TH["Thor · thor-* (default)"]
-        TA["Ta · qwen-vl (vision)"]
+        SG["Loki · loki-* (reads images)"]
+        TH["Thor · thor-* (default, reads images)"]
     end
     G --> lanes
 

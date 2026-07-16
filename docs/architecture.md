@@ -42,22 +42,22 @@ the app will ever load. This happens in two places.
 ### 1. The provider is seeded as a built-in config layer
 
 `packages/opencode/src/config/builtin-provider.ts` defines the provider and its
-model catalog. It exposes three lanes; the two chat lanes span four effort tiers
-and the vision lane is flat:
+model catalog. It exposes chat lanes that each span four effort tiers:
 
 | Lane | Family id | Character | Reasoning tiers |
 | --- | --- | --- | --- |
 | Loki | `loki` | 35B-A3B MoE, fast + fan-out worker | med, high, ultra |
 | Thor | `thor` | 27B HauhauCS dense, the default | med, high, ultra |
-| Ta | `qwen-vl` | Qwen2.5-VL-7B vision | - |
 
-The two chat lanes (Loki and Thor) each have `low`, `med`, `high`, and `ultra`
+Both chat lanes (Loki and Thor) have `low`, `med`, `high`, and `ultra`
 tiers, so a model id is composed as `<family>-<tier>`, e.g. `thor-med`. The tiers
 set the reasoning budget: `low` turns thinking off, while `med`/`high`/`ultra`
 allot 2048/8192/32768 reasoning-budget tokens. Thor also exposes a
 `thor-1m-<tier>` variant (~1M context via YaRN, loaded exclusively on the
-gateway). The Ta vision lane (`qwen-vl`) is flat - a single id with no effort
-tiers. A `z-image` text-to-image model is also defined.
+gateway). There is no separate vision lane: every chat lane (Loki, Thor, and
+`thor-1m`) reads image input directly via its own mmproj projector. A `z-image`
+text-to-image generation model and a `qwen-image-edit` image-editing model are
+also defined.
 
 The provider is emitted by `darkLlmBuiltinConfig()` and points at the gateway:
 
@@ -218,9 +218,9 @@ before sign-in; once a key is present, the gateway's `/v1/models` response wins.
    model.
 3. **Provider resolution** - `provider.ts` filters to the allowed provider and,
    if a key is present, refreshes the model list from `GET /v1/models`.
-4. **Model selection** - `/model` picks a lane (Loki/Thor/Ta) and `/effort`
-   picks a tier (low/med/high/ultra); they compose into `<family>-<tier>` (the
-   flat Ta vision lane ignores the tier).
+4. **Model selection** - `/model` picks a lane (Loki/Thor) and `/effort`
+   picks a tier (low/med/high/ultra); they compose into `<family>-<tier>`. Each
+   lane reads image input directly via its own mmproj projector.
 5. **Inference** - the request goes to `https://dark-llm.cropbinary.com/v1` as an
    OpenAI-compatible completion with the `dark-llm` key, and the TUI renders the
    response with the single live working indicator and post-hoc reasoning summary.

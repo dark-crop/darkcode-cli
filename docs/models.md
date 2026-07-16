@@ -6,30 +6,28 @@ the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. No other pr
 `["dark-llm"]` after all config is merged, so a fresh install lists and uses only these
 models.
 
-The provider exposes **3 lanes**: two chat lanes across **4 effort tiers** plus a flat
-vision lane. A chat model id is always `<family>-<tier>` (for example `thor-med`). The
-default model is `dark-llm/thor-med`.
+The provider exposes **2 chat lanes** across **4 effort tiers**. A chat model id is always
+`<family>-<tier>` (for example `thor-med`). The default model is `dark-llm/thor-med`.
 
-## The three lanes
+## The two lanes
 
-Each lane is a different model on the gateway, picked for a different job.
+Each lane is a different model on the gateway, picked for a different job. Both chat lanes
+read images directly - each loads its own mmproj projector - so there is no separate vision
+lane and no vision model.
 
 | Lane | Family (`<family>`) | Backing model | Best for |
 | --- | --- | --- | --- |
 | **Loki** | `loki` | Qwen3.6-35B-A3B MoE | Fast lane - quick answers and cheap fan-out |
 | **Thor** | `thor` | Qwen3.6-27B dense | Coding + orchestrator - the default workhorse |
-| **Ta** | `qwen-vl` | Qwen2.5-VL-7B | Vision lane - reads images (flat id, no tiers) |
 
-Thor is the default lane. Loki trades depth for speed and low cost. Ta is the vision lane:
-a flat id (`qwen-vl`) with no effort tiers, used for reading images. Thor also has a
+Thor is the default lane. Loki trades depth for speed and low cost. Thor also has a
 long-context variant, `thor-1m` (~1M tokens via YaRN), that the gateway swaps in on its own
-and unloads the other lanes to make room.
+and unloads the other lanes to make room; it too reads images via its own mmproj.
 
 ## The four effort tiers
 
 The tier (`<tier>`) sets the reasoning budget and the context window. Tiers apply
-uniformly across the chat lanes (Loki and Thor, including `thor-1m`). The Ta vision lane is
-flat and ignores the tier.
+uniformly across the chat lanes (Loki and Thor, including `thor-1m`).
 
 | Tier | Thinking | Context window | Reasoning budget | Notes |
 | --- | --- | --- | --- | --- |
@@ -57,8 +55,6 @@ thor-low         thor-med         thor-high         thor-ultra
 thor-1m-low      thor-1m-med      thor-1m-high      thor-1m-ultra
 ```
 
-The vision lane is the single flat id `qwen-vl` (no tier).
-
 Fully qualified, the default is `dark-llm/thor-med`.
 
 ## Switching lane and tier
@@ -69,7 +65,7 @@ touching the other. Both are available as slash commands and in the command pale
 
 ### `/model` - pick the lane
 
-Opens the lane picker (Loki / Thor / Ta). It switches only the family and **keeps
+Opens the lane picker (Loki / Thor). It switches only the family and **keeps
 your current tier** (defaulting to `med` if none is set). There is no separate `/models`
 command - `/model` is the single model command, and the hidden `model.list` action and the
 `<leader>m` keybind both point at the same lane picker.
@@ -81,8 +77,7 @@ command - `/model` is the single model command, and the hidden `model.list` acti
 ### `/effort` - pick the tier
 
 Opens the effort picker (low / med / high / ultra). It switches only the tier and **keeps
-your current lane** (defaulting to `thor` if none is set). It is a no-op on the Ta vision
-lane, which has no tiers.
+your current lane** (defaulting to `thor` if none is set).
 
 ```
 /effort
@@ -126,7 +121,6 @@ is filtered out of the picker:
 loki-{low,med,high,ultra}
 thor-{low,med,high,ultra}
 thor-1m-{low,med,high,ultra}
-qwen-vl
 ```
 
 To see the live list, sign in first (see [auth.md](auth.md)), then open `/model`.
