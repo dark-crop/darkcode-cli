@@ -43,7 +43,7 @@
 
 Most coding agents route your code and prompts through a vendor's cloud. **darkcode routes them to a
 machine you own.** It is a hard-locked terminal client for the self-hosted
-[**Dark-LLM**](https://github.com/chatthong/dark-llm) gateway - your own uncensored Qwen models, your
+[**Dark-LLM**](https://github.com/dark-crop/dark-core) gateway - your own uncensored Qwen models, your
 own image pipeline, on your own GPU box. A fresh install talks to **one gateway and nothing else**: no
 OpenAI, no Anthropic, no telemetry to a third party.
 
@@ -101,13 +101,13 @@ darkcode --version
 
 Re-run the same line any time to update. The installer lands in `~/.darkcode` and links the launcher
 into `~/.local/bin` (override with `DARKCODE_HOME` / `DARKCODE_BIN`). Same script is on GitHub:
-`curl -fsSL https://raw.githubusercontent.com/chatthong/darkcode/master/install.sh | bash`.
+`curl -fsSL https://raw.githubusercontent.com/dark-crop/darkcode-cli/master/install.sh | bash`.
 
 <details>
 <summary><b>Or install from source</b> (Bun, no build step)</summary>
 
 ```bash
-git clone https://github.com/chatthong/darkcode.git
+git clone https://github.com/dark-crop/darkcode-cli.git
 cd darkcode
 bun install
 ./darkcode --help          # runs immediately
@@ -238,7 +238,7 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 ## Requirements
 
 - **[Bun](https://bun.sh)** (the only runtime; no build step).
-- A reachable **[Dark-LLM](https://github.com/chatthong/dark-llm) gateway** and a user key (get one via
+- A reachable **[Dark-LLM](https://github.com/dark-crop/dark-core) gateway** and a user key (get one via
   `/login`).
 
 ## Docs

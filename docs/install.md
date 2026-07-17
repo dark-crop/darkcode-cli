@@ -26,7 +26,7 @@ curl -fsSL https://bun.sh/install | bash
 ## Install from source
 
 ```bash
-git clone https://github.com/chatthong/darkcode.git
+git clone https://github.com/dark-crop/darkcode-cli.git
 cd darkcode
 bun install
 ./darkcode --help          # run it - works immediately, no build step

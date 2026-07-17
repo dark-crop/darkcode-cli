@@ -11,7 +11,7 @@
 # DARKCODE_BIN (where the launcher symlink goes).
 set -euo pipefail
 
-REPO="${DARKCODE_REPO:-https://github.com/chatthong/darkcode.git}"
+REPO="${DARKCODE_REPO:-https://github.com/dark-crop/darkcode-cli.git}"
 BRANCH="${DARKCODE_BRANCH:-master}"
 INSTALL_DIR="${DARKCODE_HOME:-$HOME/.darkcode}"
 BIN_DIR="${DARKCODE_BIN:-$HOME/.local/bin}"
