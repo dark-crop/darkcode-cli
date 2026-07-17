@@ -40,8 +40,11 @@ export const Flag = {
   OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
     Config.withDefault(false),
   ),
+  // darkcode: default to DISABLED copy-on-select (no auto-copy when you highlight text). Selection
+  // no longer copies on mouse-up; the user copies explicitly with ctrl+y or right-click. Set the env
+  // var to "false"/"0" to get the old auto-copy-on-select behavior back.
   OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT:
-    copy === undefined ? process.platform === "win32" : truthy("OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"),
+    copy === undefined ? true : truthy("OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"),
   OPENCODE_MODELS_URL: process.env["OPENCODE_MODELS_URL"],
   OPENCODE_MODELS_PATH: process.env["OPENCODE_MODELS_PATH"],
   OPENCODE_DB: process.env["OPENCODE_DB"],
