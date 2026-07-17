@@ -92,7 +92,19 @@ flowchart LR
 
 ## Install
 
-darkcode installs **from source** (Bun, no build step):
+**One line** (installs Bun if needed, fetches the source, puts `darkcode` on your PATH):
+
+```bash
+curl -fsSL https://dark-llm.cropbinary.com/install.sh | bash
+darkcode --version
+```
+
+Re-run the same line any time to update. The installer lands in `~/.darkcode` and links the launcher
+into `~/.local/bin` (override with `DARKCODE_HOME` / `DARKCODE_BIN`). Same script is on GitHub:
+`curl -fsSL https://raw.githubusercontent.com/chatthong/darkcode/master/install.sh | bash`.
+
+<details>
+<summary><b>Or install from source</b> (Bun, no build step)</summary>
 
 ```bash
 git clone https://github.com/chatthong/darkcode.git
@@ -107,6 +119,8 @@ Symlink the launcher onto your `PATH` so `git pull` alone updates your installed
 sudo ln -s "$(pwd)/darkcode" /usr/local/bin/darkcode
 cd ~/my-project && darkcode
 ```
+
+</details>
 
 > **Why the `./darkcode` launcher and not `bun run src/index.ts`?** The TUI uses SolidJS JSX, which Bun
 > only transforms with the `@opentui/solid` preload active. The launcher wires that up while keeping
