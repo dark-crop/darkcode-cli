@@ -16,13 +16,6 @@
   <a href="#status"><img alt="status" src="https://img.shields.io/badge/status-early%20preview-a855f7?style=flat-square" /></a>
 </p>
 
-```
-▛▀▀▀▜   darkcode
-▌▪ ▪▐   Thor · med · Dark LLM
-▌ ▬ ▐   ~/code/project
-▙▄▄▄▟
-```
-
 <p align="center">
   <a href="#the-unlock">The unlock</a> ·
   <a href="#quick-start">Quick start</a> ·
