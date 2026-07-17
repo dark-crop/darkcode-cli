@@ -1,5 +1,5 @@
 import { For } from "solid-js"
-import { MASCOT_SPRITE } from "./mascot-sprite"
+import { MASCOT_SPRITE, MASCOT_MINI } from "./mascot-sprite"
 
 /**
  * The darkcode character: a purple-blob pixel sprite rendered as full terminal cells (one space
@@ -9,10 +9,11 @@ import { MASCOT_SPRITE } from "./mascot-sprite"
  * Single source of truth - import this anywhere the mascot is shown (welcome screen, etc.) so
  * every surface renders the exact same character from the same sprite data.
  */
-export function Mascot() {
+export function Mascot(props: { mini?: boolean }) {
+  const sprite = props.mini ? MASCOT_MINI : MASCOT_SPRITE
   return (
     <box flexShrink={0}>
-      <For each={MASCOT_SPRITE}>
+      <For each={sprite}>
         {(row) => (
           <text>
             <For each={row}>{(bg) => <span style={bg ? { bg } : {}}> </span>}</For>

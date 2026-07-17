@@ -62,7 +62,11 @@ export const Info = Schema.Struct({
   scroll_speed: Schema.optional(ScrollSpeed).annotate({ description: "TUI scroll speed" }),
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),
-  mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  mouse: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Enable mouse capture (default: true) so the wheel scrolls the chat and clicks work. Set false " +
+      "for native terminal text selection (drag + cmd/ctrl+C), but then the wheel maps to arrow keys.",
+  }),
 })
 export type Info = Schema.Schema.Type<typeof Info>
 

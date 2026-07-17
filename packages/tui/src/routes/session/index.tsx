@@ -49,7 +49,6 @@ import { openEditor } from "../../editor"
 import { useDialog } from "../../ui/dialog"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { TodoItem } from "../../component/todo-item"
-import { DialogMessage } from "./dialog-message"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
@@ -1254,16 +1253,9 @@ export function Session() {
                       <Match when={message.role === "user"}>
                         <UserMessage
                           index={index()}
-                          onMouseUp={() => {
-                            if (renderer.getSelection()?.getSelectedText()) return
-                            dialog.replace(() => (
-                              <DialogMessage
-                                messageID={message.id}
-                                sessionID={route.sessionID}
-                                setPrompt={(promptInfo) => prompt?.set(promptInfo)}
-                              />
-                            ))
-                          }}
+                          // Clicking a chat message does nothing (no Message Actions popup) - lets the
+                          // user click/drag to select text freely.
+                          onMouseUp={() => {}}
                           message={message as UserMessage}
                           parts={sync.data.part[message.id] ?? []}
                           pending={pending()}
@@ -1382,14 +1374,7 @@ function UserMessage(props: {
   return (
     <>
       <Show when={text()}>
-        <box
-          id={props.message.id}
-          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
-          border={["left"]}
-          borderColor={color()}
-          customBorderChars={SplitBorder.customBorderChars}
-          marginTop={props.index === 0 ? 0 : 1}
-        >
+        <box id={props.message.id} ref={(el: BoxRenderable) => alwaysSeparate.add(el)} marginTop={props.index === 0 ? 0 : 1}>
           <box
             onMouseOver={() => {
               setHover(true)
@@ -1398,13 +1383,15 @@ function UserMessage(props: {
               setHover(false)
             }}
             onMouseUp={props.onMouseUp}
-            paddingTop={1}
-            paddingBottom={1}
-            paddingLeft={2}
-            backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
+            paddingLeft={1}
+            paddingRight={1}
+            // No left prefix bar; a soft purple bubble (brand purple #a855f7 at low alpha, so the
+            // terminal bg shows through). Compact: no vertical padding.
+            backgroundColor={RGBA.fromInts(168, 85, 247, hover() ? 55 : 38)}
             flexShrink={0}
           >
-            <text fg={theme.text}>{text()}</text>
+            {/* eslint-disable-next-line */}
+            <text fg={theme.text}><span style={{ fg: theme.primary }}>{"❯ "}</span>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>

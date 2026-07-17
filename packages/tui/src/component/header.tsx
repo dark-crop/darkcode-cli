@@ -1,15 +1,13 @@
-import { createMemo, For } from "solid-js"
+import { createMemo } from "solid-js"
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
 import { useLocal } from "../context/local"
 import { useDirectory } from "../context/directory"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
-
-// Small pixel mascot rendered to the left of the header text (Claude Code-style).
-const MASCOT = ["▛▀▀▀▜", "▌▪ ▪▐", "▌ ▬ ▐", "▙▄▄▄▟"]
+import { Mascot } from "./mascot"
 
 /**
- * Compact top-left header shared by the home and session screens: a small mascot
+ * Compact top-left header shared by the home and session screens: the small purple-blob mascot
  * plus brand + version, current model, and working directory.
  */
 export function Header() {
@@ -24,9 +22,8 @@ export function Header() {
 
   return (
     <box flexDirection="row" gap={2} flexShrink={0} paddingTop={1} paddingBottom={1}>
-      <box flexShrink={0}>
-        <For each={MASCOT}>{(line) => <text fg={theme.primary}>{line}</text>}</For>
-      </box>
+      <Mascot mini />
+
       <box>
         <box flexDirection="row" gap={1}>
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
