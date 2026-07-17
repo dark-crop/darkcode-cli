@@ -29,7 +29,7 @@ What happens when you run it:
 1. darkcode opens the gateway's **`/token`** page in your default browser
    (`https://dark-llm.cropbinary.com/token`).
 2. That page is a self-contained login: it shows a **username + password form directly
-   on the `/token` page** — no new tab, no polling, no LiteLLM dashboard. On submit it
+   on the `/token` page** - no new tab, no polling, no LiteLLM dashboard. On submit it
    POSTs your credentials same-origin to LiteLLM's `/login` using `fetch` with
    `redirect: 'manual'`, so LiteLLM sets its readable `token` cookie **without the page
    ever navigating to the dashboard** (LiteLLM still 302-redirects, but the fetch never
@@ -37,7 +37,7 @@ What happens when you run it:
    success the page reads the `token` cookie (a JWT), decodes the session key, calls
    `POST /key/generate` (`key_alias: darkcode-<timestamp>`) to mint a scoped darkcode
    key, and **displays it with a Copy button**. A **Sign out** button clears the session
-   cookie (best-effort `/sso/logout` too) and returns to the login form — handy on
+   cookie (best-effort `/sso/logout` too) and returns to the login form - handy on
    shared machines.
 3. Back in the TUI, a prompt is waiting: *"Sign in in the browser, then paste your
    token below."* Paste the `sk-...` key and press enter.

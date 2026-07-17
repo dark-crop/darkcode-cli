@@ -24,6 +24,39 @@ import { Reference } from "@opencode-ai/core/reference"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 
+// Baseline "who/where/when" the agent should always know: local date, time, timezone,
+// approximate location, and language. Location is derived from the system timezone only
+// (no IP geolocation / no network call) to keep darkcode's "one gateway, nothing else"
+// privacy promise - the IANA zone name already tells us the region locally.
+function localContext(): string[] {
+  const now = new Date()
+  const resolved = Intl.DateTimeFormat().resolvedOptions()
+  const timeZone = resolved.timeZone // IANA, e.g. "Asia/Bangkok"
+  const locale = resolved.locale // e.g. "en-US"
+  const offset =
+    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
+      .formatToParts(now)
+      .find((p) => p.type === "timeZoneName")?.value ?? "GMT"
+  const localTime = now.toLocaleString(locale, {
+    timeZone,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+  // "Asia/Bangkok" -> "Bangkok, Asia"; "America/New_York" -> "New York, America"
+  const seg = timeZone.split("/")
+  const place = seg.length >= 2 ? `${seg[seg.length - 1].replace(/_/g, " ")}, ${seg[0].replace(/_/g, " ")}` : timeZone
+  return [
+    `  Local time: ${localTime} (${offset})`,
+    `  Timezone: ${timeZone} (${offset})`,
+    `  Approx location (from system timezone): ${place}`,
+    `  Language: ${locale}`,
+  ]
+}
+
 export function provider(model: Provider.Model) {
   if (model.api.id.includes("muse-spark")) return [PROMPT_META]
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
@@ -72,6 +105,7 @@ const layer = Layer.effect(
             `  Is directory a git repo: ${ctx.project.vcs === "git" ? "yes" : "no"}`,
             `  Platform: ${process.platform}`,
             `  Today's date: ${new Date().toDateString()}`,
+            ...localContext(),
             `</env>`,
           ].join("\n"),
           references.length === 0

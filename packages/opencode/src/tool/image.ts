@@ -13,11 +13,13 @@ export const Parameters = Schema.Struct({
   prompt: Schema.String.annotate({
     description: "Description of the image to generate, or the change to apply when editing.",
   }),
-  mode: Schema.optional(Schema.Literals(["generate", "edit", "pose"])).annotate({
+  mode: Schema.optional(Schema.Literals(["generate", "edit", "pose", "inpaint"])).annotate({
     description:
       'Set to "edit" to modify an existing image (attached images are used automatically). Set to "pose" to ' +
       "copy a POSE: the user attaches TWO images - the FIRST is the person to re-pose, the SECOND is the pose " +
-      'to copy (keeps the person\'s identity). Omit or "generate" to create a new image from the prompt.',
+      'to copy (keeps the person\'s identity). Set to "inpaint" to regenerate only a masked region: the user ' +
+      "attaches TWO images - the FIRST is the base image, the SECOND is a mask (white = area to change, same " +
+      'size as the base). Omit or "generate" to create a new image from the prompt.',
   }),
   images: Schema.optional(Schema.Array(Schema.String)).annotate({
     description:
@@ -92,20 +94,28 @@ export const ImageTool = Tool.define(
           for (const p of explicit) yield* assertExternalDirectoryEffect(ctx, p)
           if (outAbs) yield* assertExternalDirectoryEffect(ctx, outAbs)
 
-          // Edit/pose inputs: explicit paths win; otherwise pick up the image(s) the user attached this turn.
+          // Edit/pose/inpaint inputs: explicit paths win; otherwise pick up the image(s) the user attached this turn.
           const isPose = params.mode === "pose"
-          const wantsInput = params.mode === "edit" || isPose
-          const attached = explicit.length === 0 && wantsInput ? attachedImages(ctx.messages).slice(0, isPose ? 2 : 3) : []
+          const isInpaint = params.mode === "inpaint"
+          const twoInput = isPose || isInpaint
+          const wantsInput = params.mode === "edit" || twoInput
+          const attached =
+            explicit.length === 0 && wantsInput ? attachedImages(ctx.messages).slice(0, twoInput ? 2 : 3) : []
           const sources = explicit.length > 0 ? explicit : attached.map((a) => a.url)
           const isEdit = sources.length > 0
           if (isPose && sources.length < 2)
             throw new Error(
               "Pose mode needs 2 images - attach the person FIRST, then the pose reference (or pass 2 paths in `images`).",
             )
+          if (isInpaint && sources.length < 2)
+            throw new Error(
+              "Inpaint mode needs 2 images - attach the base image FIRST, then a mask (white = area to change, " +
+                "same size as the base), or pass 2 paths in `images`.",
+            )
           if (wantsInput && !isEdit)
             throw new Error("This needs an image - attach one to your message, or pass file paths in `images`.")
 
-          const modeLabel = isPose ? "pose" : isEdit ? "edit" : "generate"
+          const modeLabel = isPose ? "pose" : isInpaint ? "inpaint" : isEdit ? "edit" : "generate"
           yield* ctx.ask({
             permission: "image",
             patterns: [modeLabel],
@@ -121,9 +131,9 @@ export const ImageTool = Tool.define(
             let resp: Response
             if (isEdit) {
               const form = new FormData()
-              form.append("model", isPose ? "qwen-image-pose" : "qwen-image-edit")
+              form.append("model", isPose ? "qwen-image-pose" : isInpaint ? "qwen-image-inpaint" : "qwen-image-edit")
               form.append("prompt", params.prompt)
-              for (const s of sources.slice(0, isPose ? 2 : 3)) {
+              for (const s of sources.slice(0, twoInput ? 2 : 3)) {
                 const { bytes, filename } = await bytesFrom(s)
                 form.append("image", new Blob([new Uint8Array(bytes)]), filename)
               }
@@ -166,8 +176,14 @@ export const ImageTool = Tool.define(
           })
 
           const rel = saved.map((s) => path.relative(instance.worktree, s))
-          const model = isPose ? "qwen-image-pose" : isEdit ? "qwen-image-edit" : "z-image"
-          const verb = isPose ? "Re-posed" : isEdit ? "Edited" : "Generated"
+          const model = isPose
+            ? "qwen-image-pose"
+            : isInpaint
+              ? "qwen-image-inpaint"
+              : isEdit
+                ? "qwen-image-edit"
+                : "z-image"
+          const verb = isPose ? "Re-posed" : isInpaint ? "Inpainted" : isEdit ? "Edited" : "Generated"
           return {
             title: rel.join(", "),
             metadata: { mode: modeLabel, saved, prompt: params.prompt },

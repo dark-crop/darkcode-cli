@@ -1,208 +1,254 @@
+<h1 align="center">darkcode</h1>
+
 <p align="center">
-  <h1 align="center">darkcode</h1>
+  <b>A terminal coding agent wired to your own private, uncensored LLM - not someone else's cloud.</b>
 </p>
 
-<p align="center">A polished, <strong>power-purple</strong> terminal coding agent locked to your self-hosted <strong>Dark-LLM</strong> gateway.</p>
+<p align="center">
+  Claude Code-style TUI &nbsp;·&nbsp; one hard-locked gateway &nbsp;·&nbsp; local image generate / edit / re-pose baked in
+</p>
 
 <p align="center">
   <a href="#install"><img alt="platform" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational?style=flat-square" /></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" /></a>
-  <a href="https://github.com/chatthong/darkcode"><img alt="status" src="https://img.shields.io/badge/status-early%20preview-8b5cf6?style=flat-square" /></a>
+  <a href="#relationship-to-opencode"><img alt="fork" src="https://img.shields.io/badge/fork%20of-opencode-8b5cf6?style=flat-square" /></a>
+  <a href="#install"><img alt="runtime" src="https://img.shields.io/badge/runtime-Bun-000?style=flat-square" /></a>
+  <a href="#status"><img alt="status" src="https://img.shields.io/badge/status-early%20preview-a855f7?style=flat-square" /></a>
+</p>
+
+```
+▛▀▀▀▜   darkcode
+▌▪ ▪▐   Thor · med · Dark LLM
+▌ ▬ ▐   ~/code/project
+▙▄▄▄▟
+```
+
+<p align="center">
+  <a href="#the-unlock">The unlock</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#models">Models</a> ·
+  <a href="#images">Images</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#the-lock">The lock</a> ·
+  <a href="#docs">Docs</a>
 </p>
 
 ---
 
-**darkcode** is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - two chat lanes (Loki, Thor) across four effort tiers (low / med / high / ultra), each reading images directly via its own mmproj projector - and hides every other provider, so a fresh install talks to one gateway and nothing else.
+<p align="center">
+  <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with the Thor model, purple mascot header, live working row" width="840" />
+</p>
 
-Its config lives in its own `~/.config/darkcode` directory, so it never touches your opencode setup. The interface is a stripped-down, Claude Code-style TUI: a compact mascot header that scrolls with the chat, a clean divider-framed input, and a single live "working" indicator with a rotating, faintly sassy verb.
+## The unlock
 
-> **Early preview.** darkcode is under active development and diverges from upstream opencode. It is not affiliated with or endorsed by the opencode team. See [Relationship to opencode](#relationship-to-opencode).
+Most coding agents route your code and prompts through a vendor's cloud. **darkcode routes them to a
+machine you own.** It is a hard-locked terminal client for the self-hosted
+[**Dark-LLM**](https://github.com/chatthong/dark-llm) gateway - your own uncensored Qwen models, your
+own image pipeline, on your own GPU box. A fresh install talks to **one gateway and nothing else**: no
+OpenAI, no Anthropic, no telemetry to a third party.
 
-## Highlights
-
-- **One gateway, one provider.** Hard-locked to the built-in `dark-llm` provider. No opencode / openai / anthropic entries ever appear in the picker - `enabled_providers` is forced after all config merges.
-- **Two-axis model control.** Pick the lane with `/model` (Loki / Thor) and the effort tier with `/effort` (low / med / high / ultra). The chat lanes compose into `<family>-<tier>`, e.g. `thor-med`. Both lanes read images directly through their own mmproj projector, so there is no separate vision lane.
-- **Live model list.** The picker pulls `GET /v1/models` from the gateway with your signed-in key, so you see exactly what your key is entitled to, and falls back to a static built-in list when offline.
-- **Browser sign-in.** `/login` opens the gateway `/token` page, which mints and shows a key to paste back; `/logout` removes it.
-- **Context at a glance.** `/context` shows context-window usage with a segmented per-category bar, a token breakdown, and running cost.
-- **Vivid purple look.** A single accent - `#a855f7` dark, `#7c3aed` light - defined in one place and working in both dark and light terminals.
-- **Isolated config.** Everything lives under `~/.config/darkcode` (and sibling XDG dirs), never your opencode config or keys.
-
-## Install
-
-darkcode installs **from source only**. There is no npm package or prebuilt binary yet, so you clone the repo, install dependencies with [Bun](https://bun.sh), and run the committed `./darkcode` launcher. Bun is the only runtime you need; there is no build step.
-
-```bash
-git clone https://github.com/chatthong/darkcode.git
-cd darkcode
-bun install
-./darkcode --help          # runs immediately, no build step
-```
-
-To run `darkcode` from any project directory, symlink the launcher onto your `PATH`. A symlink (rather than a copy) keeps it pointing at the repo, so `git pull` alone updates your installed command:
-
-```bash
-sudo ln -s "$(pwd)/darkcode" /usr/local/bin/darkcode
-
-darkcode --help              # now works from anywhere
-cd ~/my-project && darkcode  # operates on your current directory
-```
-
-No `/usr/local/bin`, or prefer no `sudo`? Link into any dir on your `PATH`, for example `~/.local/bin/darkcode`.
-
-> **Why a launcher and not `bun run src/index.ts`?**
-> darkcode's TUI uses SolidJS JSX, which Bun only transforms when the `@opentui/solid` preload is active. The `./darkcode` script wires that up while keeping *your* working directory as the project:
->
-> ```bash
-> exec bun --preload "$preload" packages/opencode/src/index.ts "$@"
-> ```
->
-> Running the entry file directly without the preload fails with `Cannot find module 'react/jsx-dev-runtime'`. Always start through the launcher.
-
-Contributors: the repo installs a Husky **pre-push git hook** that checks your Bun version against the pinned `packageManager` and runs the full `bun turbo typecheck` before every push. It only affects pushing, not running.
-
-See [docs/install.md](docs/install.md) for the full launcher walkthrough, PATH options, updating, and troubleshooting.
-
-## Quick start
-
-```bash
-darkcode        # start the TUI (defaults to the dark-llm provider)
-```
-
-Then, inside the TUI:
-
-```
-/login          # sign in: opens the gateway /token page, paste the key back
-/model          # pick a lane:  Loki (fast) · Thor (coding, default) - both read images
-/effort         # pick a tier:  low · med · high · ultra
-/context        # see context-window usage, token breakdown, and cost
-```
-
-The default model is `dark-llm/thor-med`. Non-interactive use works too:
-
-```bash
-darkcode run --model dark-llm/loki-low "explain this error"
-```
-
-## Models
-
-The built-in `dark-llm` provider exposes **two chat lanes**. A chat model id is always `<family>-<tier>` (for example `thor-med`). Both lanes read images directly - each loads its own mmproj projector - so there is no separate vision lane.
-
-| Lane | Family (`<family>`) | Backing model | Best for |
-| --- | --- | --- | --- |
-| **Loki** | `loki` | Qwen3.6-35B-A3B MoE | Fast lane - quick answers and cheap fan-out; reads images |
-| **Thor** | `thor` | Qwen3.6-27B HauhauCS | Coding - the default lane; reads images |
-
-Loki and Thor both carry the four effort tiers below. (Thor also has a ~1M-context variant, `thor-1m`, reached via the `thor-1m-<tier>` ids and selectable with `--model`; it reads images too.)
-
-| Tier | Thinking | Context | Max output |
-| --- | --- | --- | --- |
-| `low` | off | 64k | 4,096 |
-| `med` | on | 128k | 8,192 (default) |
-| `high` | on | 200k | 16,384 |
-| `ultra` | on | 256k | 32,768 |
-
-`/model` switches only the lane (keeping your tier) and `/effort` switches only the tier (keeping your lane), so a typical flow is `/model` to Thor, then `/effort` to `ultra`, giving `thor-ultra`. Either lane can read an image directly - no lane switch needed. There is no `/models` command - `/model` is the single lane picker.
+It keeps the whole [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP, sub-agents,
+sessions) and layers on a small, well-contained set of changes: the provider lock, an isolated config
+dir, a Claude Code-style interface, two-axis model control, browser sign-in, and **local image
+generation / editing / pose-transfer as first-class agent tools.**
 
 ```mermaid
 flowchart LR
     U(["you"]) --> DC["darkcode TUI"]
+    DC -->|"Bearer key (/login)"| G{{"Dark-LLM gateway<br/>your GPU box"}}
 
-    subgraph control["two-axis control"]
+    subgraph lanes["built-in dark-llm provider (locked)"]
         direction TB
-        M["/model → lane"]
-        E["/effort → tier"]
+        LK["Loki · fast"]
+        TH["Thor · coder (default)"]
+        T1["Thor 1M · huge context"]
     end
-    DC -.-> control
-
-    DC -->|"Bearer key (/login)"| G{{"Dark-LLM gateway<br/>dark-llm.cropbinary.com"}}
-
-    subgraph lanes["built-in dark-llm provider"]
+    subgraph img["image tools"]
         direction TB
-        SG["Loki · loki-* (reads images)"]
-        TH["Thor · thor-* (default, reads images)"]
+        GEN["generate · z-image"]
+        EDT["edit · Qwen-Image-Edit"]
+        POSE["pose · AnyPose"]
+        INP["inpaint · AliMama CN"]
     end
     G --> lanes
+    G --> img
 
     classDef hub fill:#a855f7,stroke:#7c3aed,stroke-width:2px,color:#fff
     class G hub
 ```
 
-The list is **live**. With a signed-in key (or `DARK_LLM_KEY` set), darkcode calls `GET https://dark-llm.cropbinary.com/v1/models` and reconciles the result against the static built-in set (keeping known metadata, dropping ids the gateway does not return, synthesizing unknown ones, filtering out embedding models). Any failure - offline, no key, or a 4s timeout - falls back to the static list, so the picker is never empty.
+## Highlights
 
-See [docs/models.md](docs/models.md) for the full lane/tier reference and the live-refresh details.
+| | |
+|---|---|
+| 🔒 **One gateway, one provider** | Hard-locked to `dark-llm`. No other provider ever appears in the picker. |
+| 🧠 **Two-axis model control** | `/model` picks the lane (Loki / Thor / Thor 1M), `/effort` picks the tier (low → ultra). |
+| 👁 **Every lane reads images** | Attach a screenshot and ask - all chat lanes have vision built in. |
+| 🎨 **Images as tools** | Generate, edit, and **re-pose** images inline - the agent calls them when you ask. |
+| 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, no new tabs. |
+| 🟣 **Power-purple, Claude Code-style** | Scrolling mascot header, clean divider-framed input, one sassy live "working" verb. |
+| 📦 **Isolated config** | Lives in `~/.config/darkcode` - never touches your opencode setup or keys. |
 
-## Signing in
+## Install
 
-`/login` is a **browser-only** flow:
-
-1. It opens the gateway's `/token` page (`https://dark-llm.cropbinary.com/token`) in your default browser. The link is also printed in the dialog if the browser does not open.
-2. You sign in **on that page itself** - it shows a username + password form, with no new tab and no gateway dashboard to land on. On success it mints and displays a darkcode key (`sk-...`); wrong credentials show an inline error so you can retry in place. A **Sign out** button on the page clears the session again, handy on shared machines.
-3. Paste the key back into the waiting prompt. darkcode validates it against `GET /v1/models` and, if the gateway accepts it, stores it and shows *"Signed in to Dark LLM."*
-
-`/logout` removes the stored `dark-llm` credential and returns you to a signed-out state.
-
-For CI, containers, or any non-interactive environment, set the key through the `DARK_LLM_KEY` environment variable instead:
+darkcode installs **from source** (Bun, no build step):
 
 ```bash
-export DARK_LLM_KEY="sk-..."
-darkcode
+git clone https://github.com/chatthong/darkcode.git
+cd darkcode
+bun install
+./darkcode --help          # runs immediately
 ```
 
-The key is stored in darkcode's isolated auth store (`auth.json`, mode `0600`, under `~/.local/share/darkcode/`). See [docs/auth.md](docs/auth.md).
+Symlink the launcher onto your `PATH` so `git pull` alone updates your installed command:
+
+```bash
+sudo ln -s "$(pwd)/darkcode" /usr/local/bin/darkcode
+cd ~/my-project && darkcode
+```
+
+> **Why the `./darkcode` launcher and not `bun run src/index.ts`?** The TUI uses SolidJS JSX, which Bun
+> only transforms with the `@opentui/solid` preload active. The launcher wires that up while keeping
+> *your* cwd as the project. Running the entry file directly fails with `Cannot find module
+> 'react/jsx-dev-runtime'`. Always start through the launcher. See [docs/install.md](docs/install.md).
+
+## Quick start
+
+```bash
+darkcode                      # 1. start the TUI
+```
+```
+/login                        # 2. sign in (browser page: user/pass -> token, paste back)
+> how do I ...                # 3. just talk to it
+```
+
+The default model is **`thor-med`**. Non-interactive too:
+
+```bash
+darkcode run --model dark-llm/loki-low "explain this stack trace"
+```
+
+## Models
+
+Two chat lanes across four effort tiers, plus a huge-context variant. A model id is `<lane>-<tier>`
+(e.g. `thor-med`).
+
+| Lane | id | Best for |
+|---|---|---|
+| 🦊 **Loki** | `loki-{low,med,high,ultra}` | Fast answers, cheap fan-out (MoE) |
+| ⚡ **Thor** | `thor-{low,med,high,ultra}` | Coding - **the default workhorse** |
+| 🌌 **Thor 1M** | `thor-1m-{low,med,high,ultra}` | ~1M-token context (loads on demand) |
+
+| Tier | Thinking | Context |
+|---|---|---|
+| `low` | off | 64k |
+| `med` | on (default) | 128k |
+| `high` | on | 200k |
+| `ultra` | on | 256k |
+
+`/model` switches the lane (keeps your tier); `/effort` switches the tier (keeps your lane). The list
+is **live** - darkcode pulls `GET /v1/models` from the gateway so you see exactly what your key allows,
+and falls back to a static list offline. See [docs/models.md](docs/models.md).
+
+## Images
+
+darkcode can **make and change images inline** - the agent calls the `image` tool when you ask, or use
+the `/image` shortcut. The edit/pose modes keep your subject's identity by conditioning on your real photo.
+
+| Mode | How to use | Behind it |
+|---|---|---|
+| 🖼 **Generate** | `generate a purple robot icon, 16:9` | Z-Image Turbo (~24 s) |
+| ✏️ **Edit** | *attach a photo* → `replace her shirt with a party dress` | Qwen-Image-Edit-2511 + Lightning (~10-15 s) |
+| 🤸 **Pose** | *attach person + pose image* → `make her do this pose` | AnyPose - copies the pose, keeps identity |
+| 🩹 **Inpaint** | *attach image + mask* → `put a balloon in the white area` | Qwen-Image AliMama inpaint ControlNet - masked region only |
+
+```
+/image a wide 16:9 landscape of neon mountains       # generate (name a ratio or WxH)
+[attach photo]  add a party hat on her head          # edit - attached image used automatically
+[attach person] [attach pose]  copy this pose        # pose - person first, pose second
+```
+
+Results save as PNG in your workspace. The first image call asks a one-time permission. See
+[docs/images.md](docs/images.md).
+
+## Commands
+
+| Command | Does |
+|---|---|
+| `/login` · `/logout` | Browser sign-in (in-page user/pass → token) · sign out |
+| `/model` | Pick the lane - Loki / Thor / Thor 1M |
+| `/effort` | Pick the tier - low / med / high / ultra |
+| `/image <prompt>` | Generate or edit an image (natural language works too) |
+| `/context` | Context-window usage: segmented bar, token breakdown, cost |
 
 ## The interface
 
-darkcode ships a Claude Code-style TUI, everything inside a single scrollbox:
+A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 
 ```
-▛▀▀▀▜  darkcode v0.x.x
+▛▀▀▀▜  darkcode
 ▌▪ ▪▐  thor-med  dark-llm
 ▌ ▬ ▐  ~/code/project
 ▙▄▄▄▟
 
-  › how do I ...            (your messages and the model's answers)
+  › how do I ...                       (your messages + the model's answers)
 
-  ▓ You wish I was faster  (12s · ↓ 1.2k tokens)   <- one live working row
+  ▓ You wish I was faster  (12s · ↓ 1.2k)   ← one live working row
 
-────────────────────────────────────────────────────────
+────────────────────────────────────────────
   › <your next prompt>
-────────────────────────────────────────────────────────
-  Thor · thor-med  dark-llm        tab agents  ctrl+p commands
+────────────────────────────────────────────
+  Thor · thor-med  dark-llm      tab agents  ctrl+p commands
 ```
 
-- **Scrolling mascot header** - a small pixel face (in the brand purple) with `darkcode`, the model, and the cwd. It lives *inside* the scrollbox, so it scrolls away with the conversation instead of being pinned.
-- **Clean input** - full-width divider lines above and below frame a `›` prompt indicator. No shaded box, no placeholder text.
-- **Footer** - the current agent/model/provider on the left when idle, `tab agents` / `ctrl+p commands` hints on the right, above a full-width divider.
-- **One live working indicator** - a block spinner plus a rotating sassy verb (from `working-verb.tsx`, e.g. *"Ugh, fine..."*, *"The audacity..."*) plus `(elapsed · ↓ tokens)`, shown the instant the session goes busy. It is the single live signal - there is no footer spinner or per-message header.
-- **Quiet reasoning** - while thinking, nothing extra shows; once done, a muted grey `Thought: Xs` summary renders *below* the answer.
-- **No sidebar** - context usage moved to `/context`.
-- **Plain exit epilogue** - the word `darkcode` plus `Continue  darkcode -s <session>`.
+- **Scrolling mascot header** - pixel face + model + cwd, scrolls with the chat (not pinned).
+- **Clean input** - full-width dividers frame a `›` indicator; no shaded box, no placeholder.
+- **One live "working" verb** - a block spinner + a rotating, faintly sassy verb + `(elapsed · ↓ tokens)`.
+- **Quiet reasoning** - a muted `Thought: Xs` renders *below* the answer once done.
 
-The whole app is themed from one accent, defined once in `packages/tui/src/theme/assets/darkcode.json`: `brandDark` `#a855f7` (dark terminals) and `brandLight` `#7c3aed` (light). Everything else - `step9`, `step10`, and the `accent` tokens - references those names, and components read `theme.primary`, so a single edit recolors the mascot, the `›` indicator, the working verb, and the input rail. The default theme name is `darkcode`.
+The whole app is themed from one accent (`#a855f7` dark, `#7c3aed` light) defined once in
+`packages/tui/src/theme/assets/darkcode.json`. See [docs/ui.md](docs/ui.md).
 
-See [docs/ui.md](docs/ui.md) for the full layout and [docs/context.md](docs/context.md) for `/context`.
+## The lock
 
-## The Dark-LLM gateway
+This is the point of the fork - darkcode only ever talks to one provider. Three enforcement points:
 
-darkcode is the client half of a two-part local stack. It talks to one endpoint, `https://dark-llm.cropbinary.com` (a self-hosted [LiteLLM](https://github.com/BerriAI/litellm) deployment). All traffic is OpenAI-compatible chat completions against `.../v1`, authenticated with a per-user key sent as `Authorization: Bearer <key>`. The gateway is the single source of truth for which lanes and tiers a key may use; the static catalog exists only so the picker works offline or before sign-in.
+1. **Config isolation** - `packages/core/src/global.ts` sets `app = "darkcode"`, so all XDG dirs are
+   `~/.config/darkcode` etc. It never reads your existing opencode config or auth.
+2. **Provider hard-lock** - `config.ts` forces `enabled_providers = ["dark-llm"]` after all config
+   merges, so opencode / openai / anthropic never appear regardless of user config.
+3. **Built-in provider** - `builtin-provider.ts` bakes in the `dark-llm` provider with zero config:
+   base URL, the lanes/tiers, and the default `thor-med`.
 
-## Documentation
+## Requirements
 
-Full docs live in [docs/](docs/):
+- **[Bun](https://bun.sh)** (the only runtime; no build step).
+- A reachable **[Dark-LLM](https://github.com/chatthong/dark-llm) gateway** and a user key (get one via
+  `/login`).
+
+## Docs
 
 | Doc | What it covers |
-| --- | --- |
-| [install.md](docs/install.md) | Build from source, the `./darkcode` launcher and required preload, PATH setup, the pre-push typecheck hook, troubleshooting. |
-| [models.md](docs/models.md) | The lanes and tiers, `/model` and `/effort`, and the live gateway model list. |
-| [auth.md](docs/auth.md) | `/login` (browser flow) and `/logout`, key storage, and `DARK_LLM_KEY`. |
-| [context.md](docs/context.md) | The `/context` command: usage bar, token breakdown, and cost. |
-| [ui.md](docs/ui.md) | The Claude Code-style interface and the power-purple theme SSOT. |
-| [architecture.md](docs/architecture.md) | The provider lock, isolated config, `packages/` layout, and how darkcode differs from upstream. |
+|---|---|
+| [install.md](docs/install.md) | Build from source, the launcher + required preload, PATH, troubleshooting. |
+| [models.md](docs/models.md) | Lanes, tiers, `/model` / `/effort`, the live model list. |
+| [images.md](docs/images.md) | The `image` tool + `/image`: generate, edit, pose. |
+| [auth.md](docs/auth.md) | `/login` (in-page browser flow) and `/logout`, key storage, `DARK_LLM_KEY`. |
+| [context.md](docs/context.md) | The `/context` usage bar. |
+| [ui.md](docs/ui.md) | The Claude Code-style interface and the power-purple theme. |
+| [architecture.md](docs/architecture.md) | The provider lock, isolated config, `packages/` layout. |
 
 ## Relationship to opencode
 
-darkcode is a downstream fork. It keeps the entire opencode engine (agents, tools, MCP, LSP, sessions, the Effect runtime, the SolidJS/OpenTUI interface) and layers a small, well-contained set of changes on top: the provider lock, the isolated config dir, the power-purple theme, the Claude Code-style UI, and the `/model` `/effort` `/login` `/logout` `/context` command set. Internal package names (`@opencode-ai/*`) and API shapes are left compatible to keep upstream merges tractable. Credit for the underlying agent belongs to the [opencode](https://github.com/sst/opencode) team.
+darkcode is a downstream **fork of [opencode](https://github.com/sst/opencode)**. It keeps the entire
+agent engine and layers on the provider lock, isolated config, the power-purple Claude Code-style UI,
+two-axis model control, the browser login, and the image tools. Internal package names
+(`@opencode-ai/*`) are kept compatible to keep upstream merges tractable. Credit for the underlying
+agent belongs to the opencode team. It is **not affiliated with or endorsed by** opencode.
+
+## Status
+
+**Early preview.** Under active development and diverging from upstream. Expect rough edges.
 
 ## License
 

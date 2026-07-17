@@ -13,9 +13,14 @@ export type DialogPromptProps = {
   value?: string
   busy?: boolean
   busyText?: string
+  /** Mask the entered text as bullets (for secrets like the sign-in token). The real value is
+   * kept off-screen and returned on submit, so the key never renders or lands in scrollback. */
+  password?: boolean
   onConfirm?: (value: string) => void
   onCancel?: () => void
 }
+
+const BULLET = "•"
 
 export function DialogPrompt(props: DialogPromptProps) {
   const dialog = useDialog()
@@ -25,9 +30,36 @@ export function DialogPrompt(props: DialogPromptProps) {
   const [textareaTarget, setTextareaTarget] = createSignal<TextareaRenderable>()
   let textarea: TextareaRenderable
 
+  // Password mode: hold the true value off-screen and show only bullets. On every content change we
+  // rebuild the real value (bullets map positionally to already-captured chars, literals are freshly
+  // typed/pasted), then rewrite the buffer to bullets. It self-terminates: once the buffer already
+  // equals the bullet string, no further setText happens, so there is no render loop.
+  let realValue = props.password ? (props.value ?? "") : ""
+  let masking = false
+  function syncMask() {
+    if (!props.password || masking) return
+    const shown = textarea.plainText
+    let oi = 0
+    let out = ""
+    for (const ch of shown) {
+      if (ch === BULLET) {
+        out += realValue[oi] ?? ""
+        oi++
+      } else out += ch
+    }
+    realValue = out
+    const masked = BULLET.repeat(realValue.length)
+    if (masked !== shown) {
+      masking = true
+      textarea.setText(masked)
+      textarea.gotoLineEnd()
+      masking = false
+    }
+  }
+
   function confirm() {
     if (props.busy) return
-    props.onConfirm?.(textarea.plainText)
+    props.onConfirm?.(props.password ? realValue : textarea.plainText)
   }
 
   useBindings(() => ({
@@ -48,6 +80,14 @@ export function DialogPrompt(props: DialogPromptProps) {
 
   onMount(() => {
     dialog.setSize("medium")
+    if (props.password) {
+      textarea.onContentChange = () => syncMask()
+      if (realValue) {
+        masking = true
+        textarea.setText(BULLET.repeat(realValue.length))
+        masking = false
+      }
+    }
     setTimeout(() => {
       if (!textarea || textarea.isDestroyed) return
       if (props.busy) return

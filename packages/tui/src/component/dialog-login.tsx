@@ -49,6 +49,7 @@ export function DialogLogin() {
     await open(url).catch(() => undefined)
     const key = await DialogPrompt.show(dialog, "Sign in in the browser, then paste your token below", {
       placeholder: "sk-...",
+      password: true,
       description: () => (
         <box gap={1}>
           <text fg={theme.textMuted}>Open this page, sign in, and it shows your token (click to open, or copy):</text>
