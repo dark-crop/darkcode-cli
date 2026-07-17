@@ -84,8 +84,9 @@ flowchart LR
 | 🔒 **One gateway, one provider** | Hard-locked to `dark-llm`. No other provider ever appears in the picker. |
 | 🧠 **Two-axis model control** | `/model` picks the lane (Loki / Thor / Thor 1M), `/effort` picks the tier (low → ultra). |
 | 👁 **Every lane reads images** | Attach a screenshot and ask - all chat lanes have vision built in. |
-| 🎨 **Images as tools** | Generate, edit, and **re-pose** images inline - the agent calls them when you ask. |
-| 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, no new tabs. |
+| 🎨 **Images as tools** | Generate, edit, **re-pose**, and **inpaint** images inline - the agent calls them when you ask. |
+| 🕐 **Knows who / where / when** | The agent always knows your local date, time, timezone, approximate location, and language - derived from your system timezone, **no IP-geolocation or network call**. |
+| 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, and the pasted key is masked. |
 | 🟣 **Power-purple, Claude Code-style** | Scrolling mascot header, clean divider-framed input, one sassy live "working" verb. |
 | 📦 **Isolated config** | Lives in `~/.config/darkcode` - never touches your opencode setup or keys. |
 
