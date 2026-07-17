@@ -26,6 +26,55 @@ if [ ! -d "$OC/node_modules" ] && [ ! -d "$ROOT/node_modules" ]; then
   exit 1
 fi
 
+# ── Background auto-update (managed installs only) ───────────────────────────
+# Like Claude Code: on launch we quietly fetch the latest source in the background so the NEXT
+# start runs it. Guarded so it ONLY touches installs created by install.sh (the .darkcode-managed
+# marker) - never a dev clone, where a `git reset --hard` would discard your local work.
+# Disable entirely with DARKCODE_NO_UPDATE=1. Throttled to at most once every 4 hours.
+darkcode_update_notice() {
+  if [ -f "$ROOT/.update-pending" ]; then
+    printf '\033[35m*\033[0m darkcode updated to %s (running now)\n' \
+      "$(cut -c1-9 "$ROOT/.update-pending" 2>/dev/null)" >&2
+    rm -f "$ROOT/.update-pending" 2>/dev/null || true
+  fi
+}
+
+darkcode_maybe_update() {
+  [ "${DARKCODE_NO_UPDATE:-0}" = "1" ] && return 0
+  [ -f "$ROOT/.darkcode-managed" ] || return 0
+  [ -d "$ROOT/.git" ] || return 0
+  command -v git >/dev/null 2>&1 || return 0
+
+  local stamp="$ROOT/.last-update-check" now last
+  now="$(date +%s 2>/dev/null || echo 0)"
+  last=0
+  [ -f "$stamp" ] && last="$(cat "$stamp" 2>/dev/null || echo 0)"
+  case "$now" in ''|*[!0-9]*) now=0 ;; esac
+  case "$last" in ''|*[!0-9]*) last=0 ;; esac
+  if [ "$now" -ne 0 ]; then
+    [ "$((now - last))" -lt 14400 ] && return 0
+    printf '%s' "$now" > "$stamp" 2>/dev/null || true
+  fi
+
+  # Detached: fetch, and if the tracked branch moved, fast-forward the source + reinstall deps.
+  # The small sleep lets this launch's bun finish loading before any files change on disk.
+  (
+    sleep 3
+    git -C "$ROOT" fetch --quiet --depth 1 origin 2>/dev/null || exit 0
+    cur="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)" || exit 0
+    up="$(git -C "$ROOT" rev-parse '@{u}' 2>/dev/null)" || exit 0
+    [ "$cur" = "$up" ] && exit 0
+    git -C "$ROOT" reset --hard --quiet '@{u}' 2>/dev/null || exit 0
+    ( cd "$ROOT" && bun install --silent 2>/dev/null ) || true
+    printf '%s' "$up" > "$ROOT/.update-pending" 2>/dev/null || true
+  ) >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  return 0
+}
+
+darkcode_update_notice
+darkcode_maybe_update
+
 preload="$(cd "$OC" && bun -e 'process.stdout.write(import.meta.resolveSync("@opentui/solid/preload"))' 2>/dev/null || true)"
 if [ -z "$preload" ]; then
   echo "darkcode: could not resolve @opentui/solid/preload (is 'bun install' complete?)." >&2

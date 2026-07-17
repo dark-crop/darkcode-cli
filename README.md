@@ -92,9 +92,15 @@ curl -fsSL https://dark-llm.cropbinary.com/install.sh | bash
 darkcode --version
 ```
 
-Re-run the same line any time to update. The installer lands in `~/.darkcode` and links the launcher
-into `~/.local/bin` (override with `DARKCODE_HOME` / `DARKCODE_BIN`). Same script is on GitHub:
+The installer lands in `~/.darkcode` and links the launcher into `~/.local/bin` (override with
+`DARKCODE_HOME` / `DARKCODE_BIN`). Same script is on GitHub:
 `curl -fsSL https://raw.githubusercontent.com/dark-crop/darkcode-cli/master/install.sh | bash`.
+
+**Auto-updates in the background** (like Claude Code): an installed darkcode quietly fetches the latest
+source on launch (throttled to once every 4 hours) and applies it on your **next** start - you'll see
+`* darkcode updated to <hash>`. Re-running the install line still works to update on demand. Disable
+auto-update with `DARKCODE_NO_UPDATE=1`. Dev clones (anything without the installer's marker) are never
+auto-updated, so your local work is safe.
 
 <details>
 <summary><b>Or install from source</b> (Bun, no build step)</summary>

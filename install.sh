@@ -52,6 +52,12 @@ chmod +x "$INSTALL_DIR/darkcode"
 ln -sf "$INSTALL_DIR/darkcode" "$BIN_DIR/darkcode"
 info "Linked $BIN_DIR/darkcode -> $INSTALL_DIR/darkcode"
 
+# Mark this as a managed install so the launcher may auto-update it in the background
+# (a dev clone has no marker and is never auto-updated). Reset the throttle so the first
+# post-install launch does not immediately re-fetch.
+touch "$INSTALL_DIR/.darkcode-managed"
+date +%s > "$INSTALL_DIR/.last-update-check" 2>/dev/null || true
+
 # 5. PATH hint if the bin dir is not already on PATH.
 case ":$PATH:" in
   *":$BIN_DIR:"*) ON_PATH=1 ;;

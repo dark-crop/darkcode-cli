@@ -26,6 +26,11 @@ target
 .scripts
 .direnv/
 
+# Auto-update runtime markers (managed installs only; never committed)
+.darkcode-managed
+.last-update-check
+.update-pending
+
 # Local dev files
 opencode-dev
 UPCOMING_CHANGELOG.md
