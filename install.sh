@@ -22,14 +22,23 @@ die()  { printf '\033[31mdarkcode install: %s\033[0m\n' "$*" >&2; exit 1; }
 command -v git >/dev/null 2>&1 || die "git is required (install git, then re-run)."
 command -v curl >/dev/null 2>&1 || die "curl is required."
 
-# 1. Bun - the only runtime darkcode needs.
+# 1. Bun - the only runtime darkcode needs. Auto-detect, and install it if missing.
+export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+# Pick up an existing Bun that just isn't on PATH yet (e.g. installed moments ago in this shell),
+# so we don't reinstall it needlessly.
+export PATH="$BUN_INSTALL/bin:$PATH"
+
 if ! command -v bun >/dev/null 2>&1; then
-  info "Installing Bun..."
-  curl -fsSL https://bun.sh/install | bash >/dev/null
-  export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+  # Bun's installer unpacks a zip, so it needs unzip (or 7z) present.
+  command -v unzip >/dev/null 2>&1 || command -v 7z >/dev/null 2>&1 \
+    || die "Bun's installer needs 'unzip' - install unzip, then re-run."
+  info "Bun not found - installing Bun..."
+  curl -fsSL https://bun.sh/install | bash >/dev/null 2>&1 \
+    || die "Bun install failed (check your network / https://bun.sh, then re-run)."
   export PATH="$BUN_INSTALL/bin:$PATH"
 fi
 command -v bun >/dev/null 2>&1 || die "Bun did not install; open a new shell and re-run."
+info "Bun $(bun --version 2>/dev/null || echo '(unknown version)') ready."
 
 # 2. Fetch or update the source.
 if [ -d "$INSTALL_DIR/.git" ]; then
