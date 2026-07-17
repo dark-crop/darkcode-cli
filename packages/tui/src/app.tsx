@@ -642,18 +642,18 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "darkllm.logout",
-        title: "Sign out of Dark LLM",
+        title: "Sign out of Dark LLM and exit",
         category: "Agent",
         slashName: "logout",
         run: async () => {
+          // Remove the credential, then exit the session (like /exit or ctrl+c). A fresh start
+          // then lands on the signed-out welcome screen.
           try {
             await sdk.client.auth.remove({ providerID: DARK_LLM_PROVIDER_ID })
-            await sdk.client.instance.dispose()
-            await sync.bootstrap()
-            toast.show({ variant: "info", message: "Signed out of Dark LLM." })
           } catch {
-            toast.show({ variant: "warning", message: "Sign out failed." })
+            // best-effort: exit regardless so /logout always ends the session
           }
+          exit()
         },
       },
       {

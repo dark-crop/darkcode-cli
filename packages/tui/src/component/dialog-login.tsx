@@ -13,7 +13,7 @@ const GATEWAY = "https://dark-llm.cropbinary.com"
 const MODELS_URL = `${GATEWAY}/v1/models`
 const PROVIDER_ID = "dark-llm"
 
-/** /login — sign in to the Dark LLM gateway via token, username/password, or browser. */
+/** /login - sign in to the Dark LLM gateway via token, username/password, or browser. */
 export function DialogLogin() {
   const dialog = useDialog()
   const sdk = useSDK()

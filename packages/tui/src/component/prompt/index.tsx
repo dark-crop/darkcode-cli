@@ -931,7 +931,7 @@ export function Prompt(props: PromptProps) {
     // input's native onSubmit racing another dispatch). Without this guard,
     // a second call slips past the empty-input check before the first call
     // clears `store.prompt.input`, then awaits its own `session.create` and
-    // ultimately reads the now-empty store — sending a phantom empty prompt
+    // ultimately reads the now-empty store - sending a phantom empty prompt
     // to a freshly created session.
     if (submitting) return false
     submitting = true
