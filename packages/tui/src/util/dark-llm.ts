@@ -3,22 +3,13 @@
 // packages/opencode/src/config/builtin-provider.ts.
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 
-// Every chat lane reads images via its own mmproj, so there is no separate vision lane.
+// Thor is the only chat lane now (Loki + Thor-1M dropped so all KV goes to Thor). It reads images
+// via its mmproj, and owns the full native 262K context. Tiers pick reasoning effort.
 export const LANES = [
   {
-    family: "loki",
-    label: "Loki",
-    description: "quick and cheap",
-  },
-  {
     family: "thor",
-    label: "Thor",
-    description: "the workhorse",
-  },
-  {
-    family: "thor-1m",
-    label: "Thor 1M",
-    description: "huge context (slow to load)",
+    label: "Thor 1.1",
+    description: "the workhorse - full 262K context",
   },
 ] as const
 

@@ -22,11 +22,13 @@ const RELEASE_DATE = "2026-01-01"
 
 type Tier = "low" | "med" | "high" | "ultra"
 
+// One lane (Thor) now owns the whole KV cache: every tier gets the full native 262144-token window
+// (256 x 1024). Tiers differ only in reasoning effort (output/reasoning budget), not context.
 const TIERS: { key: Tier; context: number; output: number }[] = [
-  { key: "low", context: 64_000, output: 4_096 },
-  { key: "med", context: 128_000, output: 8_192 },
-  { key: "high", context: 200_000, output: 16_384 },
-  { key: "ultra", context: 256_000, output: 32_768 },
+  { key: "low", context: 262_144, output: 4_096 },
+  { key: "med", context: 262_144, output: 8_192 },
+  { key: "high", context: 262_144, output: 16_384 },
+  { key: "ultra", context: 262_144, output: 32_768 },
 ]
 
 function textModel(name: string, family: string, tier: (typeof TIERS)[number], reasoning: boolean): BuiltinModel {
@@ -59,9 +61,8 @@ function tieredModels(
 
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
-    ...tieredModels("loki", "Loki"),
-    ...tieredModels("thor", "Thor", { reasoningTiers: ["high", "ultra"] }),
-    ...tieredModels("thor-1m", "Thor 1M", { reasoningTiers: ["high", "ultra"] }),
+    // Thor is the only chat lane now (Loki + Thor-1M dropped so all KV goes to Thor at full 262K).
+    ...tieredModels("thor", "Thor 1.1", { reasoningTiers: ["high", "ultra"] }),
     "z-image": {
       name: "Z Image",
       family: "z-image",
@@ -75,12 +76,8 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   }
 }
 
-// "thor-1m" MUST come before "thor" so darkLlmDisplayName matches the longer prefix first
-// (otherwise "thor-1m-med" would match "thor-" and render as "Thor · 1m-med").
 const LANE_LABELS: Record<string, string> = {
-  "loki": "Loki",
-  "thor-1m": "Thor 1M",
-  "thor": "Thor",
+  "thor": "Thor 1.1",
 }
 
 /** Human display name for a gateway model id (e.g. "thor-med" -> "Thor · med"). */
@@ -107,7 +104,7 @@ export function darkLlmModelFor(id: string): BuiltinModel {
     reasoning: /-(high|ultra)$/.test(id),
     temperature: true,
     tool_call: true,
-    limit: { context: 128_000, output: 8_192 },
+    limit: { context: 262_144, output: 8_192 },
     modalities: { input: ["text", "image"], output: ["text"] },
   }
 }
