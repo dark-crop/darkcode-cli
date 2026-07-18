@@ -32,6 +32,16 @@
   <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with the Thor model, purple mascot header, live working row" width="840" />
 </p>
 
+### ⚡ Install (macOS / Linux / WSL)
+
+```bash
+curl -fsSL https://dark-llm.cropbinary.com/install.sh | bash
+darkcode          # start the TUI, then /login to sign in
+```
+
+Installs Bun if needed, puts `darkcode` on your PATH, and **auto-updates in the background** from then
+on. Already installed before auto-update existed? Run the line once more to enable it. [Full install &amp; options &rarr;](#install)
+
 ## The unlock
 
 Most coding agents route your code and prompts through a vendor's cloud. **darkcode routes them to a
