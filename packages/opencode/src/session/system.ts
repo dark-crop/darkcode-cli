@@ -54,6 +54,7 @@ function localContext(): string[] {
     `  Timezone: ${timeZone} (${offset})`,
     `  Approx location (from system timezone): ${place}`,
     `  Language: ${locale}`,
+    `  Response style: when answering questions or explaining, be thorough and complete - give the full answer with reasoning and examples where useful, not a terse one-liner. (Stay concise for tool calls and code edits.)`,
   ]
 }
 
