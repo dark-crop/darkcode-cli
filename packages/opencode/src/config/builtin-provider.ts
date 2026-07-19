@@ -24,11 +24,15 @@ type Tier = "low" | "med" | "high" | "ultra"
 
 // One lane (Mr. President) now owns the whole KV cache: every tier gets the full native 262144-token window
 // (256 x 1024). Tiers differ only in reasoning effort (output/reasoning budget), not context.
+// Output budgets are the max_tokens sent per request. They must be large enough to hold the
+// model's (often heavy) reasoning PLUS a full answer, or the answer gets truncated once the
+// reasoning eats the budget. This is a CAP, not a target - the model still stops when done -
+// so generous values only prevent truncation, they don't lengthen replies.
 const TIERS: { key: Tier; context: number; output: number }[] = [
-  { key: "low", context: 262_144, output: 4_096 },
-  { key: "med", context: 262_144, output: 8_192 },
-  { key: "high", context: 262_144, output: 16_384 },
-  { key: "ultra", context: 262_144, output: 32_768 },
+  { key: "low", context: 262_144, output: 16_384 },
+  { key: "med", context: 262_144, output: 24_576 },
+  { key: "high", context: 262_144, output: 32_000 },
+  { key: "ultra", context: 262_144, output: 32_000 },
 ]
 
 function textModel(name: string, family: string, tier: (typeof TIERS)[number], reasoning: boolean): BuiltinModel {
