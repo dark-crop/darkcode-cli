@@ -29,7 +29,7 @@ The dialog is titled **Context Usage** and has four parts.
 The current model and provider, plus the context window size when known:
 
 ```
-thor-med   dark-llm   · 200k context
+president-high   dark-llm   · 262K context
 ```
 
 - The model id and provider name come from the currently selected model

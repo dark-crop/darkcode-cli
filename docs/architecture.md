@@ -20,7 +20,7 @@ The substantive changes are:
 | --- | --- | --- |
 | Providers | Many providers, user picks and configures | Hard-locked to a single built-in `dark-llm` provider |
 | Config dir | `~/.config/opencode` | `~/.config/darkcode` (fully isolated) |
-| Default model | User/model.dev driven | `dark-llm/thor-med` |
+| Default model | User/model.dev driven | `dark-llm/president-high` |
 | Model discovery | models.dev catalog | Live `GET /v1/models` from the gateway, static fallback |
 | Brand/theme | opencode accent | "power purple" accent, default theme `darkcode` |
 | UI | opencode chrome | Claude Code-style: scrolling mascot header, clean input rail, one live working indicator |
@@ -46,18 +46,15 @@ model catalog. It exposes chat lanes that each span four effort tiers:
 
 | Lane | Family id | Character | Reasoning tiers |
 | --- | --- | --- | --- |
-| Loki | `loki` | 35B-A3B MoE, fast + fan-out worker | med, high, ultra |
-| Thor | `thor` | 27B HauhauCS dense, the default | med, high, ultra |
+| Mr. President 1.1 | `president` | AEON Qwen3.6-27B, native vLLM (NVFP4 + DFlash), the default | high, ultra |
 
-Both chat lanes (Loki and Thor) have `low`, `med`, `high`, and `ultra`
-tiers, so a model id is composed as `<family>-<tier>`, e.g. `thor-med`. The tiers
-set the reasoning budget: `low` turns thinking off, while `med`/`high`/`ultra`
-allot 2048/8192/32768 reasoning-budget tokens. Thor also exposes a
-`thor-1m-<tier>` variant (~1M context via YaRN, loaded exclusively on the
-gateway). There is no separate vision lane: every chat lane (Loki, Thor, and
-`thor-1m`) reads image input directly via its own mmproj projector. A `z-image`
-text-to-image generation model and a `qwen-image-edit` image-editing model are
-also defined.
+The one chat lane has `low`, `med`, `high`, and `ultra` tiers, so a model id is composed
+as `<family>-<tier>`, e.g. `president-high` (the default). The tiers set the reasoning
+budget: `low` turns thinking off; `med`/`high`/`ultra` raise it. Every tier gets the full
+native 262K context. The lane is vision-capable via its own vision tower, so there is no
+separate vision lane. A `z-image` text-to-image generation model and a `qwen-image-edit`
+image-editing model are also defined. **The lane's display name is loaded live from the
+gateway (`/v1/models` + `/model/info`), never hardcoded in the client.**
 
 The provider is emitted by `darkLlmBuiltinConfig()` and points at the gateway:
 
@@ -65,7 +62,7 @@ The provider is emitted by `darkLlmBuiltinConfig()` and points at the gateway:
 // builtin-provider.ts
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "thor-med"
+export const DARK_LLM_DEFAULT_MODEL_ID = "president-high"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 ```
 
@@ -131,7 +128,7 @@ const res = await fetch(url, { headers: { Authorization: `Bearer ${key}` } })
 The returned ids are reconciled against the static set: known ids keep their rich
 metadata, ids the gateway does not expose are dropped, and unknown ids are
 synthesized via `darkLlmModelFor()` / `darkLlmDisplayName()` (e.g.
-`thor-med` renders as "Thor - med"). Any failure - offline, no key,
+the display name comes live from the gateway). Any failure - offline, no key,
 timeout (4s) - falls back to the static catalog. The `/model` and `/effort`
 commands read from this reconciled list.
 
@@ -218,7 +215,7 @@ before sign-in; once a key is present, the gateway's `/v1/models` response wins.
    model.
 3. **Provider resolution** - `provider.ts` filters to the allowed provider and,
    if a key is present, refreshes the model list from `GET /v1/models`.
-4. **Model selection** - `/model` picks a lane (Loki/Thor) and `/effort`
+4. **Model selection** - `/model` shows the model lane and `/effort`
    picks a tier (low/med/high/ultra); they compose into `<family>-<tier>`. Each
    lane reads image input directly via its own mmproj projector.
 5. **Inference** - the request goes to `https://dark-llm.cropbinary.com/v1` as an

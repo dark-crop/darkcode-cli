@@ -1,6 +1,6 @@
 # darkcode docs
 
-darkcode is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - three model lanes (Loki, Thor, Ta), with four effort tiers (low/med/high/ultra) on the Loki and Thor chat lanes - and hides every other provider, so a fresh install talks to one gateway and nothing else. Its config lives in its own `~/.config/darkcode` directory, so it never touches your opencode setup.
+darkcode is an MIT-licensed fork of [opencode](https://github.com/sst/opencode), rebranded around a vivid "power purple" accent and locked into being a dedicated terminal client for the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. It ships a built-in `dark-llm` provider - one chat lane (Mr. President 1.1, native vLLM) across four effort tiers (low/med/high/ultra) - and hides every other provider, so a fresh install talks to one gateway and nothing else. Its config lives in its own `~/.config/darkcode` directory, so it never touches your opencode setup.
 
 ## Documentation
 
@@ -22,4 +22,4 @@ ln -s "$PWD/darkcode" /usr/local/bin/darkcode   # put the launcher on your PATH
 darkcode                                   # run /login on first start, then chat
 ```
 
-The default model is `dark-llm/thor-med`. See [models.md](models.md) to switch lanes and tiers.
+The default model is `dark-llm/president-high`. See [models.md](models.md) to switch lanes and tiers.
