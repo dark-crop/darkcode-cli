@@ -744,7 +744,8 @@ function Option(props: {
   const { theme } = useTheme()
   const fg = selectedForeground(theme)
   const text = createMemo(() => {
-    if (props.active && !props.muted) return fg
+    // Active row title stays white (same as non-active); the purple bar + bold mark selection.
+    if (props.active && !props.muted) return theme.text
     if (props.muted && (props.active || props.current)) return theme.textMuted
     if (props.current) return theme.primary
     return theme.text

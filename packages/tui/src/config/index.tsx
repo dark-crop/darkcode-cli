@@ -64,9 +64,10 @@ export const Info = Schema.Struct({
   diff_style: Schema.optional(DiffStyle),
   mouse: Schema.optional(Schema.Boolean).annotate({
     description:
-      "Enable mouse capture (default: false). When false you get native terminal text selection " +
-      "(drag + cmd/ctrl+C to copy), but the wheel scrolls your shell history, not the chat. Set true " +
-      "to make the wheel scroll the chat and TUI clicks work, at the cost of native drag-selection.",
+      "Enable mouse capture (default: false). When false you get NATIVE terminal text selection - just " +
+      "drag to select and cmd/ctrl+C to copy, like a normal terminal. The wheel then emits arrow keys " +
+      "(terminal behavior). Set true to make the wheel scroll the chat, at the cost of native selection " +
+      "(you'd hold Option to select instead).",
   }),
 })
 export type Info = Schema.Schema.Type<typeof Info>
@@ -117,7 +118,7 @@ export function resolve(input: Info, options: ResolveOptions): Resolved {
       bindingDefaults: TuiKeybind.bindingDefaults(),
     }),
     leader_timeout: input.leader_timeout ?? LeaderTimeoutDefault,
-    mouse: input.mouse ?? false,
+    mouse: input.mouse ?? true,
   }
 }
 

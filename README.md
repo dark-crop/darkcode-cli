@@ -29,7 +29,7 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with the Thor model, purple mascot header, live working row" width="840" />
+  <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with Mr. President 1.1, purple mascot header, live working row" width="840" />
 </p>
 
 ### ⚡ Install (macOS / Linux / WSL)
@@ -52,7 +52,7 @@ OpenAI, no Anthropic, no telemetry to a third party.
 
 It keeps the whole [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP, sub-agents,
 sessions) and layers on a small, well-contained set of changes: the provider lock, an isolated config
-dir, a Claude Code-style interface, two-axis model control, browser sign-in, and **local image
+dir, a Claude Code-style interface, one native-vLLM model with effort tiers, browser sign-in, and **local image
 generation / editing / pose-transfer as first-class agent tools.**
 
 ```mermaid
@@ -62,9 +62,8 @@ flowchart LR
 
     subgraph lanes["built-in dark-llm provider (locked)"]
         direction TB
-        LK["Loki · fast"]
-        TH["Thor · coder (default)"]
-        T1["Thor 1M · huge context"]
+        MP["Mr. President 1.1 · 262K"]
+        EF["effort: low · med · high · ultra"]
     end
     subgraph img["image tools"]
         direction TB
@@ -85,7 +84,7 @@ flowchart LR
 | | |
 |---|---|
 | 🔒 **One gateway, one provider** | Hard-locked to `dark-llm`. No other provider ever appears in the picker. |
-| 🧠 **Two-axis model control** | `/model` picks the lane (Loki / Thor / Thor 1M), `/effort` picks the tier (low → ultra). |
+| 🧠 **One model, four efforts** | One native-vLLM lane - **Mr. President 1.1** (full 262K context) - and `/effort` picks the reasoning tier (low → ultra). The model name comes **live from the gateway**, never hardcoded. |
 | 👁 **Every lane reads images** | Attach a screenshot and ask - all chat lanes have vision built in. |
 | 🎨 **Images as tools** | Generate, edit, **re-pose**, and **inpaint** images inline - the agent calls them when you ask. |
 | 🕐 **Knows who / where / when** | The agent always knows your local date, time, timezone, approximate location, and language - derived from your system timezone, **no IP-geolocation or network call**. |
@@ -146,33 +145,30 @@ darkcode                      # 1. start the TUI
 > how do I ...                # 3. just talk to it
 ```
 
-The default model is **`thor-med`**. Non-interactive too:
+The default model is **`president-high`** (Mr. President 1.1, high effort). Non-interactive too:
 
 ```bash
-darkcode run --model dark-llm/loki-low "explain this stack trace"
+darkcode run --model dark-llm/president-low "explain this stack trace"
 ```
 
 ## Models
 
-Two chat lanes across four effort tiers, plus a huge-context variant. A model id is `<lane>-<tier>`
-(e.g. `thor-med`).
-
-| Lane | id | Best for |
-|---|---|---|
-| 🦊 **Loki** | `loki-{low,med,high,ultra}` | Fast answers, cheap fan-out (MoE) |
-| ⚡ **Thor** | `thor-{low,med,high,ultra}` | Coding - **the default workhorse** |
-| 🌌 **Thor 1M** | `thor-1m-{low,med,high,ultra}` | ~1M-token context (loads on demand) |
+One chat lane - **Mr. President 1.1** (native vLLM: uncensored Qwen3.6-27B, NVFP4 + speculative
+decoding, full 262K context) - across four effort tiers. A model id is `<lane>-<tier>`
+(e.g. `president-med`).
 
 | Tier | Thinking | Context |
 |---|---|---|
-| `low` | off | 64k |
-| `med` | on (default) | 128k |
-| `high` | on | 200k |
-| `ultra` | on | 256k |
+| `low` | off - fastest, cleanest output | 262K |
+| `med` | on - small reasoning budget | 262K |
+| `high` | on (default) - large reasoning budget | 262K |
+| `ultra` | on - max reasoning budget | 262K |
 
-`/model` switches the lane (keeps your tier); `/effort` switches the tier (keeps your lane). The list
-is **live** - darkcode pulls `GET /v1/models` from the gateway so you see exactly what your key allows,
-and falls back to a static list offline. See [docs/models.md](docs/models.md).
+Every tier gets the full native **262K** window; they differ only in how much the model thinks.
+`/effort` switches the tier. **The model name and list come live from the gateway** (`GET /v1/models`
++ `/model/info`) - darkcode never hardcodes the model, so the picker always shows exactly what your
+key is allowed and whatever the gateway is currently serving. Falls back to a generic label offline.
+See [docs/models.md](docs/models.md).
 
 ## Images
 
@@ -200,7 +196,7 @@ Results save as PNG in your workspace. The first image call asks a one-time perm
 | Command | Does |
 |---|---|
 | `/login` · `/logout` | Browser sign-in (in-page user/pass → token) · sign out |
-| `/model` | Pick the lane - Loki / Thor / Thor 1M |
+| `/model` | Pick the model lane (currently Mr. President 1.1) |
 | `/effort` | Pick the tier - low / med / high / ultra |
 | `/image <prompt>` | Generate or edit an image (natural language works too) |
 | `/context` | Context-window usage: segmented bar, token breakdown, cost |
@@ -211,7 +207,7 @@ A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 
 ```
 ▛▀▀▀▜  darkcode
-▌▪ ▪▐  thor-med  dark-llm
+▌▪ ▪▐  Mr. President 1.1 · med  dark-llm
 ▌ ▬ ▐  ~/code/project
 ▙▄▄▄▟
 
@@ -222,7 +218,7 @@ A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 ────────────────────────────────────────────
   › <your next prompt>
 ────────────────────────────────────────────
-  Thor · thor-med  dark-llm      tab agents  ctrl+p commands
+  Mr. President 1.1 · med  dark-llm    tab agents  ctrl+p commands
 ```
 
 - **Scrolling mascot header** - pixel face + model + cwd, scrolls with the chat (not pinned).
@@ -242,7 +238,7 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 2. **Provider hard-lock** - `config.ts` forces `enabled_providers = ["dark-llm"]` after all config
    merges, so opencode / openai / anthropic never appear regardless of user config.
 3. **Built-in provider** - `builtin-provider.ts` bakes in the `dark-llm` provider with zero config:
-   base URL, the lanes/tiers, and the default `thor-med`.
+   base URL, the lanes/tiers, and the default `president-high`.
 
 ## Requirements
 

@@ -9,7 +9,7 @@ import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
  */
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "thor-med"
+export const DARK_LLM_DEFAULT_MODEL_ID = "president-high"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 
 type BuiltinModel = NonNullable<ConfigV1.Info["provider"]>[string]["models"] extends infer M
@@ -22,7 +22,7 @@ const RELEASE_DATE = "2026-01-01"
 
 type Tier = "low" | "med" | "high" | "ultra"
 
-// One lane (Thor) now owns the whole KV cache: every tier gets the full native 262144-token window
+// One lane (Mr. President) now owns the whole KV cache: every tier gets the full native 262144-token window
 // (256 x 1024). Tiers differ only in reasoning effort (output/reasoning budget), not context.
 const TIERS: { key: Tier; context: number; output: number }[] = [
   { key: "low", context: 262_144, output: 4_096 },
@@ -61,8 +61,9 @@ function tieredModels(
 
 export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
-    // Thor is the only chat lane now (Loki + Thor-1M dropped so all KV goes to Thor at full 262K).
-    ...tieredModels("thor", "Thor 1.1", { reasoningTiers: ["high", "ultra"] }),
+    // One native-vLLM chat lane owns all KV at full 262K. The "President" label here is only an
+    // OFFLINE fallback; online the brand name comes from the gateway (/model/info display_name).
+    ...tieredModels("president", "President", { reasoningTiers: ["high", "ultra"] }),
     "z-image": {
       name: "Z Image",
       family: "z-image",
@@ -76,16 +77,17 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   }
 }
 
-const LANE_LABELS: Record<string, string> = {
-  "thor": "Thor 1.1",
-}
-
-/** Human display name for a gateway model id (e.g. "thor-med" -> "Thor · med"). */
+/**
+ * OFFLINE-fallback display for a gateway model id, derived purely from the id
+ * (e.g. "president-med" -> "President · med"). No brand name is hardcoded here -
+ * online, the real display name comes from the gateway's /model/info `display_name`
+ * (see the live reconcile in provider.ts), so renaming only ever touches the gateway.
+ */
 export function darkLlmDisplayName(id: string): string {
-  for (const [family, label] of Object.entries(LANE_LABELS)) {
-    if (id.startsWith(family + "-")) return `${label} · ${id.slice(family.length + 1)}`
-  }
-  return id
+  const m = id.match(/^(.*)-(low|med|high|ultra)$/)
+  if (!m) return id
+  const lane = m[1].charAt(0).toUpperCase() + m[1].slice(1)
+  return `${lane} · ${m[2]}`
 }
 
 /**

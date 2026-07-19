@@ -1642,6 +1642,39 @@ const layer = Layer.effect(
                   .map((m) => m.id)
                   .filter((id): id is string => !!id && !id.includes("embed"))
                 if (!ids.length) return
+
+                // Pull gateway-owned display metadata so model names are NEVER hardcoded in the
+                // client: the brand name lives only on the gateway (litellm model_info.display_name)
+                // and clients render whatever it returns. Best-effort - falls back to a generic
+                // id-derived label (darkLlmDisplayName) if /model/info is unreachable.
+                const meta = new Map<string, { name?: string; effort?: string; context?: number }>()
+                try {
+                  const root = base.replace(/\/v1$/, "")
+                  const ctrl2 = new AbortController()
+                  const timer2 = setTimeout(() => ctrl2.abort(), 4000)
+                  const infoRes = await fetch(`${root}/model/info`, {
+                    headers: { Authorization: `Bearer ${key}` },
+                    signal: ctrl2.signal,
+                  })
+                  clearTimeout(timer2)
+                  if (infoRes.ok) {
+                    const info = (await infoRes.json()) as {
+                      data?: Array<{
+                        model_name?: string
+                        model_info?: { display_name?: string; effort?: string; context_length?: number }
+                      }>
+                    }
+                    for (const m of info.data ?? []) {
+                      if (!m.model_name) continue
+                      meta.set(m.model_name, {
+                        name: m.model_info?.display_name,
+                        effort: m.model_info?.effort,
+                        context: m.model_info?.context_length,
+                      })
+                    }
+                  }
+                } catch {}
+
                 const returned = new Set(ids)
                 const models = providers[darkllm].models
                 // Clone an existing entry to get the exact runtime model shape (api, variants,
@@ -1649,15 +1682,25 @@ const layer = Layer.effect(
                 const template = Object.values(models)[0] as any
                 for (const id of Object.keys(models)) if (!returned.has(id)) delete models[id]
                 for (const id of ids) {
-                  if (models[id]) continue
-                  const base: any = template
-                    ? { ...template, limit: { ...template.limit }, api: { ...(template.api ?? {}), id } }
-                    : { ...(darkLlmModelFor(id) as any), api: { id } }
-                  base.name = darkLlmDisplayName(id)
-                  base.family = id.replace(/-(low|med|high|ultra)$/, "")
-                  base.id = id
-                  base.reasoning = /-(high|ultra)$/.test(id)
-                  models[id] = base
+                  if (!models[id]) {
+                    const entry: any = template
+                      ? { ...template, limit: { ...template.limit }, api: { ...(template.api ?? {}), id } }
+                      : { ...(darkLlmModelFor(id) as any), api: { id } }
+                    entry.family = id.replace(/-(low|med|high|ultra)$/, "")
+                    entry.id = id
+                    entry.reasoning = /-(high|ultra)$/.test(id)
+                    models[id] = entry
+                  }
+                  // Gateway-owned name + context override (pure-API). Prefer the gateway
+                  // display_name; append the effort tier; fall back to the generic id label.
+                  const mm = meta.get(id)
+                  const effort = mm?.effort ?? id.match(/-(low|med|high|ultra)$/)?.[1]
+                  models[id].name = mm?.name
+                    ? effort
+                      ? `${mm.name} · ${effort}`
+                      : mm.name
+                    : darkLlmDisplayName(id)
+                  if (mm?.context && models[id].limit) models[id].limit.context = mm.context
                 }
               } catch {}
             })
