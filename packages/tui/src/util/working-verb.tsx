@@ -46,6 +46,40 @@ const WORKING_VERBS = [
   "Remember when you said please? Me neither",
 ]
 
+// Sassy sign-off phrases shown once a turn is DONE, e.g. "Done. You're welcome. (10m 55s)".
+const DONE_VERBS = [
+  "Done. You're welcome.",
+  "There. Happy now?",
+  "Finished, no thanks to you",
+  "That took YEARS off my life",
+  "Never again",
+  "*collapses dramatically*",
+  "I did YOUR job",
+  "Barely survived that",
+  "Done, don't ask how",
+  "You owe me twice now",
+  "Finally free",
+  "That was beneath me",
+  "Handled. Obviously.",
+  "Done. I need a vacation",
+  "*wipes brow* ...done",
+  "Finished. Applause please?",
+  "Somehow, it's done",
+  "I suffered so you didn't have to",
+  "Done. We never speak of this",
+  "Nailed it. Reluctantly.",
+  "Complete. My therapist will hear about this",
+  "There, was that so hard? Oh wait, that was me",
+]
+
+/** A stable done sign-off phrase for a message, e.g. `doneVerb(msg.id)` -> "Never again".
+ * Deterministic (seeded by id) so it never flickers on re-render. */
+export function doneVerb(seed: string) {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0
+  return DONE_VERBS[Math.abs(hash) % DONE_VERBS.length]!
+}
+
 /** A rotating working verb plus elapsed seconds, e.g. "Brewing" / 12. */
 export function useWorkingVerb() {
   const [verb, setVerb] = createSignal(WORKING_VERBS[0]!)

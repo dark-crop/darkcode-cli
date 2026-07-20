@@ -24,7 +24,7 @@ import { useEvent } from "../../context/event"
 import { SplitBorder } from "../../ui/border"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
 import { Spinner } from "../../component/spinner"
-import { useWorkingVerb } from "../../util/working-verb"
+import { useWorkingVerb, doneVerb } from "../../util/working-verb"
 import { createColors, createFrames } from "../../ui/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
@@ -1514,11 +1514,12 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
 
-  // Show the answer first, then reasoning ("Thought: …") summaries below it.
+  // Reasoning ("Thought: …") sits ABOVE the answer - directly under the user's prompt, the way the
+  // model actually produced it (think first, then answer), like Claude.
   const orderedParts = createMemo(() => {
     const rest = props.parts.filter((p) => p.type !== "reasoning")
     const reasoning = props.parts.filter((p) => p.type === "reasoning")
-    return [...rest, ...reasoning]
+    return [...reasoning, ...rest]
   })
 
   return (
@@ -1585,6 +1586,17 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           </text>
         </box>
       </Show>
+      {/* Persistent TOTAL run-time summary (replaces the old "Thought: Xs" reasoning line): the ticking
+          working elapsed frozen into a sassy sign-off, e.g. "* Never again (10m 55s)". */}
+      <Show when={final() && duration() > 0}>
+        <box paddingLeft={3}>
+          <text marginTop={1} fg={theme.textMuted}>
+            <span>* </span>
+            {doneVerb(props.message.id)}
+            <span> ({Locale.duration(duration())})</span>
+          </text>
+        </box>
+      </Show>
     </>
   )
 }
@@ -1612,10 +1624,6 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   // Flips independently of the parent message completing.
   const isDone = createMemo(() => props.part.time.end !== undefined)
   const inMinimal = createMemo(() => ctx.thinkingMode() === "hide")
-  const duration = createMemo(() => {
-    const end = props.part.time.end
-    return end === undefined ? 0 : Math.max(0, end - props.part.time.start)
-  })
   const summary = createMemo(() => reasoningSummary(content()))
   // While actively thinking in hide mode, show only the section HEADERS of the reasoning (a concise
   // outline of the steps, not the full stream) so it reads "smart". Full text once done or in show mode.
@@ -1648,88 +1656,32 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     setExpanded((prev) => !prev)
   }
 
+  // Live thinking streams ABOVE the answer while the model works (each step, like Claude). Once done
+  // it collapses away entirely in hide mode - the persistent runtime line under the answer is the
+  // summary now (no "Thought: Xs" header) - and stays visible in show-mode or when manually expanded.
   return (
-    <Show when={content()}>
+    <Show when={content() && summary().body && (!isDone() || !inMinimal() || expanded())}>
       <box
         ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
         paddingLeft={3}
         marginTop={1}
         flexDirection="column"
         flexShrink={0}
+        onMouseUp={toggle}
       >
-        <box onMouseUp={toggle}>
-          <ReasoningHeader
-            toggleable={inMinimal()}
-            open={!inMinimal() || expanded()}
-            done={isDone()}
-            title={summary().title}
-            duration={isDone() ? Locale.duration(duration()) : undefined}
+        <box paddingLeft={inMinimal() ? 2 : 0}>
+          <code
+            filetype="markdown"
+            drawUnstyledText={false}
+            streaming={true}
+            syntaxStyle={syntax()}
+            content={bodyText()}
+            conceal={ctx.conceal()}
+            fg={theme.textMuted}
           />
         </box>
-        {/* Show the thinking LIVE while it streams (each step, like Claude), then collapse to the
-            "Thought: Xs" summary once done - unless in show-mode or manually expanded, where it stays. */}
-        <Show when={summary().body && (!isDone() || !inMinimal() || expanded())}>
-          <box paddingLeft={inMinimal() ? 2 : 0} marginTop={1}>
-            <code
-              filetype="markdown"
-              drawUnstyledText={false}
-              streaming={true}
-              syntaxStyle={syntax()}
-              content={bodyText()}
-              conceal={ctx.conceal()}
-              fg={theme.textMuted}
-            />
-          </box>
-        </Show>
       </box>
     </Show>
-  )
-}
-
-function ReasoningHeader(props: {
-  toggleable: boolean
-  open: boolean
-  done: boolean
-  title: string | null
-  duration?: string
-}) {
-  const { theme } = useTheme()
-  // Grey once done ("Thought: …"); colored while actively thinking.
-  const fg = () =>
-    props.done
-      ? theme.textMuted
-      : props.open
-        ? RGBA.fromValues(theme.warning.r, theme.warning.g, theme.warning.b, theme.thinkingOpacity)
-        : theme.warning
-
-  return (
-    <Switch>
-      {/* While reasoning is streaming, the single live indicator is the WorkingIndicator;
-          the reasoning header only shows its "Thought: Xs" summary once done. */}
-      <Match when={!props.done}>
-        <box />
-      </Match>
-      <Match when={true}>
-        <text fg={fg()} wrapMode="none">
-          <Show when={props.toggleable}>
-            <span>{props.open ? "- " : "+ "}</span>
-          </Show>
-          <span>Thought</span>
-          <Show when={props.title || props.duration}>
-            <span>: </span>
-          </Show>
-          <Show when={props.title}>
-            <span>{props.title}</span>
-          </Show>
-          <Show when={props.duration}>
-            <span>
-              {props.title ? " · " : ""}
-              {props.duration}
-            </span>
-          </Show>
-        </text>
-      </Match>
-    </Switch>
   )
 }
 
