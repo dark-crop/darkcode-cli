@@ -3,6 +3,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import path from "path"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
+import * as nodefs from "node:fs" // TEMP: queue-interrupt diagnostic
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import { SessionRevert } from "./revert"
@@ -151,10 +152,29 @@ const layer = Layer.effect(
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      // Esc cancels the CURRENT turn and stops. (An earlier attempt to auto re-drain queued inputs
-      // here caused a regression: the interrupted turn isn't marked "answered" before the re-invoke
-      // fires, so the loop re-ran the just-cancelled message and kept thinking. Reverted.)
+      // Esc cancels the CURRENT turn and stops.
       yield* state.cancel(sessionID)
+      // TEMP queue-interrupt diagnostic: dump message state to /tmp so continue-after-interrupt can be
+      // fixed precisely (ordering + finish/aborted/answered). Remove after the fix.
+      yield* Effect.gen(function* () {
+        const msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+          Effect.provideService(Database.Service, database),
+        )
+        const lines = msgs.map((m) => {
+          const i = m.info as any
+          const a =
+            i.role === "assistant"
+              ? ` finish=${i.finish ?? "-"} aborted=${!!i.error} completed=${i.time?.completed ?? "-"}`
+              : ` text=${JSON.stringify((m.parts.find((p: any) => p.type === "text") as any)?.text?.slice(0, 30) ?? "")}`
+          return `  id=${i.id} ${i.role}${a}`
+        })
+        const dump = `=== INTERRUPT session=${sessionID} @ ${Date.now()} ===\n${lines.join("\n")}\n\n`
+        yield* Effect.sync(() => {
+          try {
+            nodefs.appendFileSync("/tmp/darkcode-queue-debug.txt", dump)
+          } catch {}
+        })
+      }).pipe(Effect.ignore)
     })
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
