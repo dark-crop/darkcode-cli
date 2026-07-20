@@ -108,7 +108,7 @@
       "light": "lightStep6"
     },
     "diffAdded": {
-      "dark": "#4fd6be",
+      "dark": "#7ee787",
       "light": "#1e725c"
     },
     "diffRemoved": {
@@ -132,11 +132,11 @@
       "light": "#f52a65"
     },
     "diffAddedBg": {
-      "dark": "#20303b",
+      "dark": "#16351c",
       "light": "#d5e5d5"
     },
     "diffRemovedBg": {
-      "dark": "#37222c",
+      "dark": "#3a1a1c",
       "light": "#f7d8db"
     },
     "diffContextBg": {
@@ -148,11 +148,11 @@
       "light": "#595959"
     },
     "diffAddedLineNumberBg": {
-      "dark": "#1b2b34",
+      "dark": "#1d4526",
       "light": "#c5d5c5"
     },
     "diffRemovedLineNumberBg": {
-      "dark": "#2d1f26",
+      "dark": "#4a2025",
       "light": "#e7c8cb"
     },
     "markdownText": {
