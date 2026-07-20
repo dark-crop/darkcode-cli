@@ -2126,11 +2126,69 @@ function Shell(props: ToolProps) {
   )
 }
 
+// Pull a (possibly still-streaming) string field out of partial tool-call JSON - e.g. the
+// "content" of a write while the model is generating it. Tolerates an unterminated value and
+// the usual JSON escapes, so we can preview the file live before the call is complete.
+function partialJsonString(raw: string, key: string): string | undefined {
+  const marker = '"' + key + '"'
+  const i = raw.indexOf(marker)
+  if (i < 0) return undefined
+  const colon = raw.indexOf(":", i + marker.length)
+  const open = raw.indexOf('"', i + marker.length)
+  if (colon < 0 || open < 0 || colon > open) return undefined
+  let out = ""
+  let k = open + 1
+  while (k < raw.length) {
+    const c = raw[k]
+    if (c === "\\") {
+      const n = raw[k + 1]
+      if (n === undefined) break
+      if (n === "u") {
+        out += String.fromCharCode(parseInt(raw.slice(k + 2, k + 6), 16) || 0)
+        k += 6
+      } else {
+        out += n === "n" ? "\n" : n === "t" ? "\t" : n === "r" ? "\r" : n
+        k += 2
+      }
+    } else if (c === '"') {
+      break // closing quote -> value fully received
+    } else {
+      out += c
+      k += 1
+    }
+  }
+  return out
+}
+
 function Write(props: ToolProps) {
+  const ctx = use()
   const { theme, syntax } = useTheme()
   const pathFormatter = usePathFormatter()
   const code = createMemo(() => {
     return stringValue(props.input.content) ?? ""
+  })
+  // While the model is still generating the write, part.state.raw holds the partial args JSON.
+  const streamRaw = createMemo(() => {
+    const st = props.part.state as { status: string; raw?: string }
+    return st.status !== "completed" && st.status !== "error" ? st.raw : undefined
+  })
+  const streamPath = createMemo(() => {
+    const raw = streamRaw()
+    return (raw ? partialJsonString(raw, "filePath") : undefined) ?? stringValue(props.input.filePath)
+  })
+  // Live preview rendered as an all-additions unified diff (green +), so a streaming write feels
+  // exactly like an edit's diff view. Tail the last 14 lines so a big file can't blow up the UI.
+  const streamDiff = createMemo(() => {
+    const raw = streamRaw()
+    if (!raw) return undefined
+    const content = partialJsonString(raw, "content")
+    if (!content) return undefined
+    const allLines = content.split("\n")
+    const N = 14
+    const tail = allLines.length > N ? allLines.slice(-N) : allLines
+    const start = allLines.length > N ? allLines.length - N + 1 : 1
+    const body = tail.map((l) => "+" + l).join("\n")
+    return `--- /dev/null\n+++ b/${streamPath() ?? "file"}\n@@ -0,0 +${start},${tail.length} @@\n${body}`
   })
 
   return (
@@ -2143,6 +2201,33 @@ function Write(props: ToolProps) {
           <Show when={code()}> ({code().split("\n").length} lines)</Show>
         </InlineTool>
         <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
+      </Match>
+      <Match when={streamDiff() !== undefined}>
+        {/* Live preview: content streaming in as the model writes it, as green additions (last 14 lines) -
+            same <diff> component as Edit, so it feels identical to an edit's diff view. */}
+        <BlockTool title={"← Writing " + (pathFormatter.format(streamPath()) || "file")} part={props.part} spinner={true}>
+          <box paddingLeft={1}>
+            <diff
+              diff={streamDiff()!}
+              view="unified"
+              filetype={filetype(streamPath())}
+              syntaxStyle={syntax()}
+              showLineNumbers={true}
+              width="100%"
+              wrapMode={ctx.diffWrapMode()}
+              fg={theme.text}
+              addedBg={theme.diffAddedBg}
+              removedBg={theme.diffRemovedBg}
+              contextBg={theme.diffContextBg}
+              addedSignColor={theme.diffHighlightAdded}
+              removedSignColor={theme.diffHighlightRemoved}
+              lineNumberFg={theme.diffLineNumber}
+              lineNumberBg={theme.diffContextBg}
+              addedLineNumberBg={theme.diffAddedLineNumberBg}
+              removedLineNumberBg={theme.diffRemovedLineNumberBg}
+            />
+          </box>
+        </BlockTool>
       </Match>
       <Match when={true}>
         <InlineTool

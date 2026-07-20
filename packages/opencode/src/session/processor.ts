@@ -157,6 +157,11 @@ const layer = Layer.effect(
         return part
       })
 
+      // Buffers the streaming tool-call args (write only) so the UI can preview the file live as
+      // it is generated. Flushed to the pending part's `raw` at most ~5x/sec (see tool-input-delta)
+      // to avoid churning the DB/UI on a large write that emits thousands of deltas.
+      const toolRawBuffer = new Map<string, { text: string; lastFlush: number }>()
+
       const completeToolCall = Effect.fn("SessionProcessor.completeToolCall")(function* (
         toolCallID: string,
         output: {
@@ -317,14 +322,37 @@ const layer = Layer.effect(
               throw new Error(`Tool call not allowed while generating summary: ${value.name}`)
             }
             yield* ensureToolCall(value)
+            // Only the write tool carries a big streamed body worth previewing live.
+            if (value.name === "write") toolRawBuffer.set(value.id, { text: "", lastFlush: 0 })
             return
 
-          case "tool-input-delta":
+          case "tool-input-delta": {
             yield* ensureToolCall(value)
+            const buf = toolRawBuffer.get(value.id)
+            if (buf) {
+              buf.text += value.text
+              const now = Date.now()
+              if (now - buf.lastFlush >= 200) {
+                buf.lastFlush = now
+                const raw = buf.text
+                yield* updateToolCall(value.id, (match) =>
+                  match.state.status === "pending" ? { ...match, state: { ...match.state, raw } } : match,
+                )
+              }
+            }
             return
+          }
 
           case "tool-input-end": {
             yield* ensureToolCall(value)
+            const buf = toolRawBuffer.get(value.id)
+            if (buf) {
+              const raw = buf.text
+              yield* updateToolCall(value.id, (match) =>
+                match.state.status === "pending" ? { ...match, state: { ...match.state, raw } } : match,
+              )
+              toolRawBuffer.delete(value.id)
+            }
             return
           }
 
