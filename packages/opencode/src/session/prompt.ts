@@ -1477,6 +1477,10 @@ const layer = Layer.effect(
         (part) => part.type !== "file" || !inputFiles.has(fileURLToPath(part.url)),
       )
       const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
+      // Chat shows just the invocation (e.g. "/init"), never the expanded instruction prompt. The
+      // template is still sent to the model but flagged `synthetic` so the transcript hides it
+      // (same mechanism reminders use) - Claude-style slash commands.
+      const invocation = "/" + input.command + (input.arguments.trim() ? " " + input.arguments.trim() : "")
       const parts = isSubtask
         ? [
             {
@@ -1488,7 +1492,11 @@ const layer = Layer.effect(
               prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
             },
           ]
-        : [...uniqueTemplateParts, ...(input.parts ?? [])]
+        : [
+            { type: "text" as const, text: invocation },
+            ...uniqueTemplateParts.map((part) => (part.type === "text" ? { ...part, synthetic: true } : part)),
+            ...(input.parts ?? []),
+          ]
 
       const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultInfo()).name) : agent.name
       const userModel = isSubtask

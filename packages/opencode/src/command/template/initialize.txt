@@ -1,66 +1,30 @@
-Create or update `AGENTS.md` for this repository.
+Analyze this repository and create (or improve) an `AGENTS.md` at `${path}` that a future darkcode
+session reads first, the same way it reads `CLAUDE.md`. Investigate with your tools before writing -
+do not guess. When done, briefly tell the user what you wrote and why.
 
-The goal is a compact instruction file that helps future OpenCode sessions avoid mistakes and ramp up quickly. Every line should answer: "Would an agent likely miss this without help?" If not, leave it out.
+Extra focus from the user (honor if present): $ARGUMENTS
 
-User-provided focus or constraints (honor these):
-$ARGUMENTS
+Investigate, executable sources first (they win over prose when they disagree):
+- README, root manifests + lockfiles, workspace/monorepo config
+- build / test / lint / format / typecheck / codegen scripts, CI workflows, pre-commit/task-runner config
+- existing agent rules to fold in: `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`,
+  `.github/copilot-instructions.md`, repo-local `opencode.json`
+- then, only if the architecture is still unclear, read the few files that show how the system is
+  wired (real entrypoints, package boundaries, execution flow) - not random leaf files
 
-## How to investigate
+Write AGENTS.md to be SHORT and high-signal. The test for every line: "would a competent agent get
+this wrong or waste time without it?" If not, cut it. Capture the hard-won facts:
+- exact commands the agent would otherwise guess wrong - build, run, lint, typecheck, and especially
+  how to run ONE test / one package / a focused check; note required order (e.g. codegen -> build)
+- monorepo boundaries and what actually owns each major directory + the real entrypoints
+- toolchain quirks: generated code, migrations, env loading, dev servers, deploy flow, build artifacts
+- conventions that DIFFER from language/framework defaults, and constraints worth preserving from the
+  existing rules files above
 
-Read the highest-value sources first:
-- `README*`, root manifests, workspace config, lockfiles
-- build, test, lint, formatter, typecheck, and codegen config
-- CI workflows and pre-commit / task runner config
-- existing instruction files (`AGENTS.md`, `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`)
-- repo-local OpenCode config such as `opencode.json`
+Do NOT include: generic engineering advice, obvious language conventions, exhaustive file trees,
+tutorials, or anything you could not verify from the repo.
 
-If architecture is still unclear after reading config and docs, inspect a small number of representative code files to find the real entrypoints, package boundaries, and execution flow. Prefer reading the files that explain how the system is wired together over random leaf files.
-
-Prefer executable sources of truth over prose. If docs conflict with config or scripts, trust the executable source and only keep what you can verify.
-
-## What to extract
-
-Look for the highest-signal facts for an agent working in this repo:
-- exact developer commands, especially non-obvious ones
-- how to run a single test, a single package, or a focused verification step
-- required command order when it matters, such as `lint -> typecheck -> test`
-- monorepo or multi-package boundaries, ownership of major directories, and the real app/library entrypoints
-- framework or toolchain quirks: generated code, migrations, codegen, build artifacts, special env loading, dev servers, infra deploy flow
-- repo-specific style or workflow conventions that differ from defaults
-- testing quirks: fixtures, integration test prerequisites, snapshot workflows, required services, flaky or expensive suites
-- important constraints from existing instruction files worth preserving
-
-Good `AGENTS.md` content is usually hard-earned context that took reading multiple files to infer.
-
-## Questions
-
-Only ask the user questions if the repo cannot answer something important. Use the `question` tool for one short batch at most.
-
-Good questions:
-- undocumented team conventions
-- branch / PR / release expectations
-- missing setup or test prerequisites that are known but not written down
-
-Do not ask about anything the repo already makes clear.
-
-## Writing rules
-
-Include only high-signal, repo-specific guidance such as:
-- exact commands and shortcuts the agent would otherwise guess wrong
-- architecture notes that are not obvious from filenames
-- conventions that differ from language or framework defaults
-- setup requirements, environment quirks, and operational gotchas
-- references to existing instruction sources that matter
-
-Exclude:
-- generic software advice
-- long tutorials or exhaustive file trees
-- obvious language conventions
-- speculative claims or anything you could not verify
-- content better stored in another file referenced via `opencode.json` `instructions`
-
-When in doubt, omit.
-
-Prefer short sections and bullets. If the repo is simple, keep the file simple. If the repo is large, summarize the few structural facts that actually change how an agent should work.
-
-If `AGENTS.md` already exists at `${path}`, improve it in place rather than rewriting blindly. Preserve verified useful guidance, delete fluff or stale claims, and reconcile it with the current codebase.
+If `AGENTS.md` already exists, edit it in place: keep what's still true, delete stale or fluffy lines,
+reconcile it with the current code. Keep it compact - a simple repo gets a simple file. Ask the user a
+question ONLY for something important the repo genuinely cannot answer (undocumented conventions,
+release/branch expectations, hidden setup prerequisites); otherwise just write the file.
