@@ -156,11 +156,11 @@
       "light": "#e7c8cb"
     },
     "markdownText": {
-      "dark": "darkStep12",
+      "dark": "#c9c6bd",
       "light": "lightStep12"
     },
     "markdownHeading": {
-      "dark": "darkAccent",
+      "dark": "#a98cd9",
       "light": "lightAccent"
     },
     "markdownLink": {
