@@ -2165,8 +2165,14 @@ function Write(props: ToolProps) {
   const streamDiff = createMemo(() => {
     const raw = streamRaw()
     if (!raw) return undefined
-    const content = partialJsonString(raw, "content")
+    let content = partialJsonString(raw, "content")
     if (!content) return undefined
+    // Only render COMPLETE lines while streaming: drop the trailing partial line so the markdown
+    // highlighter never sees a half-written token (`**bo`, `##`) and flip its colour the instant it
+    // completes - that per-token re-tokenisation is the "purple flashing". Now the preview updates
+    // once per newline, and every rendered line is fully formed.
+    const lastNL = content.lastIndexOf("\n")
+    if (lastNL >= 0) content = content.slice(0, lastNL)
     const allLines = content.split("\n")
     const N = 14
     const tail = allLines.length > N ? allLines.slice(-N) : allLines
