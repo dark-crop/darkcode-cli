@@ -3,7 +3,6 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import path from "path"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
-import * as nodefs from "node:fs" // TEMP: queue-interrupt diagnostic
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import { SessionRevert } from "./revert"
@@ -152,29 +151,24 @@ const layer = Layer.effect(
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      // Esc cancels the CURRENT turn and stops.
+      // Esc cancels the CURRENT turn's active generation (kills the run fiber).
       yield* state.cancel(sessionID)
-      // TEMP queue-interrupt diagnostic: dump message state to /tmp so continue-after-interrupt can be
-      // fixed precisely (ordering + finish/aborted/answered). Remove after the fix.
-      yield* Effect.gen(function* () {
-        const msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
-          Effect.provideService(Database.Service, database),
-        )
-        const lines = msgs.map((m) => {
-          const i = m.info as any
-          const a =
-            i.role === "assistant"
-              ? ` finish=${i.finish ?? "-"} aborted=${!!i.error} completed=${i.time?.completed ?? "-"}`
-              : ` text=${JSON.stringify((m.parts.find((p: any) => p.type === "text") as any)?.text?.slice(0, 30) ?? "")}`
-          return `  id=${i.id} ${i.role}${a}`
-        })
-        const dump = `=== INTERRUPT session=${sessionID} @ ${Date.now()} ===\n${lines.join("\n")}\n\n`
-        yield* Effect.sync(() => {
-          try {
-            nodefs.appendFileSync("/tmp/darkcode-queue-debug.txt", dump)
-          } catch {}
-        })
-      }).pipe(Effect.ignore)
+      // ...then keep the queue alive. If the user stacked input while the interrupted turn was
+      // streaming, those messages were persisted with an id ABOVE the (now aborted) assistant but the
+      // loop fiber that would have drained them just died, so nothing picks them up. Re-kick a fresh
+      // loop when such a message exists; it answers the newest queued message (the same "newest wins"
+      // steering the loop applies on normal completion). When nothing was queued, `user` is the
+      // interrupted turn itself - its id is BELOW its own aborted assistant - so we skip the re-kick
+      // and Esc stays a clean, single-turn stop (no re-running the cancelled message).
+      const msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+        Effect.provideService(Database.Service, database),
+      )
+      const { user, assistant } = MessageV2.latest(msgs)
+      const hasQueued = user && (!assistant || user.id > assistant.id)
+      if (hasQueued)
+        yield* state
+          .ensureRunning(sessionID, lastAssistant(sessionID), runLoop(sessionID))
+          .pipe(Effect.forkIn(scope))
     })
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
