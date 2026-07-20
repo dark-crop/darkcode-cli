@@ -44,8 +44,9 @@ export function DialogLogin() {
   }
 
   async function browserFlow() {
-    // The gateway's /token page: sign in there and it mints + shows your token to copy back.
-    const url = `${GATEWAY}/token`
+    // The gateway's sign-in page: sign in there and it mints + shows your token to copy back.
+    // Under /app/* to avoid colliding with LiteLLM's own /token route.
+    const url = `${GATEWAY}/app/sign-in`
     await open(url).catch(() => undefined)
     const key = await DialogPrompt.show(dialog, "Sign in in the browser, then paste your token below", {
       placeholder: "sk-...",
