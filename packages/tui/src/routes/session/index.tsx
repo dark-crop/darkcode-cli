@@ -1612,8 +1612,8 @@ const INLINE_TOOL_ICON_WIDTH = 2
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
   const { theme } = useTheme()
   const ctx = use()
-  // Collapsed by default in hide mode: a single line throughout, so the
-  // layout never shifts. Click to open the full markdown block, click to close.
+  // Collapsed by default in hide mode: a concise header outline so the layout never shifts.
+  // Click to expand to the last 12 lines of the actual thinking, click again to collapse.
   const [expanded, setExpanded] = createSignal(false)
 
   const content = createMemo(() => {
@@ -1625,11 +1625,13 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   const isDone = createMemo(() => props.part.time.end !== undefined)
   const inMinimal = createMemo(() => ctx.thinkingMode() === "hide")
   const summary = createMemo(() => reasoningSummary(content()))
-  // While actively thinking in hide mode, show only the section HEADERS of the reasoning (a concise
-  // outline of the steps, not the full stream) so it reads "smart". Full text once done or in show mode.
+  // Hide mode shows only the section HEADERS of the reasoning (a concise outline of the steps, not the
+  // full stream) so it reads "smart"; clicking expands to the last 12 lines of the actual thinking.
+  // Show mode always renders the full text.
   const bodyText = createMemo(() => {
     const body = summary().body
-    if (isDone() || !inMinimal()) return body
+    if (!inMinimal()) return body
+    if (expanded()) return body.split("\n").filter((l) => l.trim()).slice(-12).join("\n")
     const lines = body.split("\n").map((l) => l.trim())
     const headers = lines
       .filter(
@@ -2052,12 +2054,16 @@ function Shell(props: ToolProps) {
   const isRunning = createMemo(() => props.part.state.status === "running")
   const output = createMemo(() => stripAnsi(stringValue(props.metadata.output)?.trim() ?? ""))
   const [expanded, setExpanded] = createSignal(false)
-  const maxLines = 10
-  const maxChars = createMemo(() => maxLines * Math.max(20, ctx.width - 6))
-  const collapsed = createMemo(() => collapseToolOutput(output(), maxLines, maxChars()))
+  // Command output shows at most 5 lines collapsed, 12 when expanded. The overflow affordance is keyed
+  // to the collapsed (5-line) threshold so the toggle stays put regardless of expand state.
+  const collapsedLines = 5
+  const expandedLines = 12
+  const maxChars = (n: number) => n * Math.max(20, ctx.width - 6)
+  const overflow = createMemo(() => collapseToolOutput(output(), collapsedLines, maxChars(collapsedLines)).overflow)
   const limited = createMemo(() => {
-    if (expanded() || !collapsed().overflow) return output()
-    return collapsed().output
+    if (!overflow()) return output()
+    const n = expanded() ? expandedLines : collapsedLines
+    return collapseToolOutput(output(), n, maxChars(n)).output
   })
 
   const workdirDisplay = createMemo(() => {
@@ -2080,7 +2086,7 @@ function Shell(props: ToolProps) {
         <BlockTool
           title={title()}
           part={props.part}
-          onClick={collapsed().overflow ? () => setExpanded((prev) => !prev) : undefined}
+          onClick={overflow() ? () => setExpanded((prev) => !prev) : undefined}
         >
           <box gap={1}>
             <Show when={isRunning()} fallback={<text fg={theme.text}>$ {stringValue(props.input.command)}</text>}>
@@ -2089,7 +2095,7 @@ function Shell(props: ToolProps) {
             <Show when={output()}>
               <text fg={theme.text}>{limited()}</text>
             </Show>
-            <Show when={collapsed().overflow}>
+            <Show when={overflow()}>
               <text fg={theme.textMuted}>{expanded() ? "Click to collapse" : "Click to expand"}</text>
             </Show>
           </box>
