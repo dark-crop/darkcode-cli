@@ -152,6 +152,12 @@ const layer = Layer.effect(
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
       yield* state.cancel(sessionID)
+      // Interrupting cancels the WHOLE run loop, so a queued follow-up prompt (steered in one at a
+      // time) stalls - an interrupted run never triggers the next drain. Re-run the loop so any
+      // remaining unanswered/queued input keeps draining. Self-guarding: the loop exits immediately
+      // if nothing is pending, and the just-interrupted turn's assistant marks it answered, so this
+      // cannot re-run the cancelled turn. Forked so the abort request returns immediately.
+      yield* loop({ sessionID }).pipe(Effect.forkIn(scope), Effect.ignore)
     })
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
