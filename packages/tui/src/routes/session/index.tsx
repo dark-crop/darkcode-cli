@@ -1617,13 +1617,29 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     return end === undefined ? 0 : Math.max(0, end - props.part.time.start)
   })
   const summary = createMemo(() => reasoningSummary(content()))
-  // While actively thinking in hide mode, show only the last ~5 lines (a small bounded live window,
-  // like Claude) so a long think doesn't flood the terminal; full text once done or in show mode.
+  // While actively thinking in hide mode, show only the section HEADERS of the reasoning (a concise
+  // outline of the steps, not the full stream) so it reads "smart". Full text once done or in show mode.
   const bodyText = createMemo(() => {
     const body = summary().body
     if (isDone() || !inMinimal()) return body
-    const lines = body.split("\n")
-    return lines.length > 5 ? lines.slice(-5).join("\n") : body
+    const lines = body.split("\n").map((l) => l.trim())
+    const headers = lines
+      .filter(
+        (l) =>
+          /^#{1,6}\s+\S/.test(l) || // markdown header
+          /^\*\*[^*\n]+\*\*:?$/.test(l) || // **Header**  or  **Header**:
+          (l.length > 0 && l.length <= 64 && /:$/.test(l) && !/[.!?]/.test(l.slice(0, -1))), // "Short title:"
+      )
+      .map((l) =>
+        l
+          .replace(/^#{1,6}\s+/, "")
+          .replace(/^\*\*([^*\n]+)\*\*:?$/, "$1")
+          .replace(/:$/, ""),
+      )
+    if (headers.length) return headers.slice(-6).map((h) => "- " + h).join("\n")
+    // No structured headers - fall back to the last couple of lines so there's still a live signal.
+    const tail = lines.filter(Boolean).slice(-2)
+    return tail.join("\n")
   })
   const syntax = createSyntaxStyleMemo(() => generateSubtleSyntax(theme))
 
