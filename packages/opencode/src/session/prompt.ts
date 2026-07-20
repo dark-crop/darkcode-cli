@@ -1110,7 +1110,29 @@ const layer = Layer.effect(
             Effect.provideService(Database.Service, database),
           )
 
-          const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = MessageV2.latest(msgs)
+          const { user: newestUser, assistant: lastAssistant, finished: lastFinished, tasks } = MessageV2.latest(msgs)
+
+          // FIFO queue drain. The loop answers the OLDEST user still awaiting a reply so stacked
+          // messages each get their own turn - selecting the NEWEST (as latest() does) silently
+          // dropped the middle ones (e.g. queue "explain the sun" then "yo" -> only "yo" was answered).
+          // A user counts as answered once it has an assistant child that either finished cleanly (not
+          // a tool-call continuation) or was aborted (interrupted turns are not redone). When every
+          // user is answered, fall back to the newest so the normal exit / tool-call checks below run.
+          const settled = (userID: string) => {
+            const child = msgs.findLast((m) => m.info.role === "assistant" && m.info.parentID === userID)
+            if (!child) return false
+            const info = child.info as SessionV1.Assistant
+            if (info.error) return true
+            const pendingTools = child.parts.some(
+              (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+            )
+            return Boolean(info.finish) && !["tool-calls"].includes(info.finish ?? "") && !pendingTools
+          }
+          const pendingUser = msgs
+            .flatMap((m) => (m.info.role === "user" ? [m.info as SessionV1.User] : []))
+            .filter((u) => !settled(u.id))
+            .sort((a, b) => (a.id < b.id ? -1 : 1))[0]
+          const lastUser = pendingUser ?? newestUser
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
 
@@ -1126,6 +1148,7 @@ const layer = Layer.effect(
             ) ?? false
 
           if (
+            !pendingUser &&
             lastAssistant?.finish &&
             !["tool-calls"].includes(lastAssistant.finish) &&
             !hasToolCalls &&
