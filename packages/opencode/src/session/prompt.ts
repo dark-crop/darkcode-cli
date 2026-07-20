@@ -141,6 +141,15 @@ const layer = Layer.effect(
     const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
     const { db } = database
+    // The user id the run loop is CURRENTLY answering, per session. Set each iteration; read by cancel
+    // to tell "user queued a newer message" (re-kick to drain it) from "user cancelled this turn"
+    // (clean stop) - which latest()'s ids can't distinguish when the aborted assistant row doesn't
+    // exist yet (Esc landed before generation created it).
+    const runTarget = new Map<SessionID, string>()
+    // User ids whose turn the user cancelled. Normally the interrupted turn's assistant row is created
+    // then marked aborted (= settled), but an Esc BEFORE the row exists leaves the user childless; the
+    // FIFO drain would then answer that cancelled message on the next prompt. Treat these as settled.
+    const cancelledTargets = new Set<string>()
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
       return {
         cancel: (sessionID: SessionID) => cancel(sessionID),
@@ -151,20 +160,27 @@ const layer = Layer.effect(
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      // Esc cancels the CURRENT turn's active generation (kills the run fiber).
+      // Capture which user the loop was answering BEFORE we kill it. Esc cancels the CURRENT turn's
+      // active generation (kills the run fiber).
+      const target = runTarget.get(sessionID)
       yield* state.cancel(sessionID)
+      runTarget.delete(sessionID)
+      if (!target) return
+      cancelledTargets.add(target)
       // ...then keep the queue alive. If the user stacked input while the interrupted turn was
-      // streaming, those messages were persisted with an id ABOVE the (now aborted) assistant but the
-      // loop fiber that would have drained them just died, so nothing picks them up. Re-kick a fresh
-      // loop when such a message exists; it answers the newest queued message (the same "newest wins"
-      // steering the loop applies on normal completion). When nothing was queued, `user` is the
-      // interrupted turn itself - its id is BELOW its own aborted assistant - so we skip the re-kick
-      // and Esc stays a clean, single-turn stop (no re-running the cancelled message).
+      // streaming, those messages were persisted with an id ABOVE `target`, but the loop fiber that
+      // would have drained them just died - re-kick a fresh loop to drain them (it answers them FIFO).
+      // Only a REAL user message counts (not an all-synthetic reminder like a `noReply` session-move
+      // notice). Nothing strictly newer than `target` => the interrupt was a plain stop, no re-kick.
       const msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
         Effect.provideService(Database.Service, database),
       )
-      const { user, assistant } = MessageV2.latest(msgs)
-      const hasQueued = user && (!assistant || user.id > assistant.id)
+      const hasQueued = msgs.some(
+        (m) =>
+          m.info.role === "user" &&
+          m.info.id > target &&
+          !m.parts.every((p) => "synthetic" in p && p.synthetic),
+      )
       if (hasQueued)
         yield* state
           .ensureRunning(sessionID, lastAssistant(sessionID), runLoop(sessionID))
@@ -1119,6 +1135,7 @@ const layer = Layer.effect(
           // a tool-call continuation) or was aborted (interrupted turns are not redone). When every
           // user is answered, fall back to the newest so the normal exit / tool-call checks below run.
           const settled = (userID: string) => {
+            if (cancelledTargets.has(userID)) return true
             const child = msgs.findLast((m) => m.info.role === "assistant" && m.info.parentID === userID)
             if (!child) return false
             const info = child.info as SessionV1.Assistant
@@ -1128,13 +1145,23 @@ const layer = Layer.effect(
             )
             return Boolean(info.finish) && !["tool-calls"].includes(info.finish ?? "") && !pendingTools
           }
+          // Only REAL user messages are answerable. An all-synthetic user message (e.g. a `noReply`
+          // session-move/warp reminder) must never draw a reply, and having no assistant child it would
+          // otherwise look "unanswered" forever and get picked as the oldest pending turn.
           const pendingUser = msgs
-            .flatMap((m) => (m.info.role === "user" ? [m.info as SessionV1.User] : []))
+            .flatMap((m) =>
+              m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
+                ? [m.info as SessionV1.User]
+                : [],
+            )
             .filter((u) => !settled(u.id))
             .sort((a, b) => (a.id < b.id ? -1 : 1))[0]
           const lastUser = pendingUser ?? newestUser
 
           if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+          // Record who this iteration is answering so an Esc mid-turn can tell a genuine queued message
+          // (id above this) from a plain cancel of this very turn.
+          yield* Effect.sync(() => runTarget.set(sessionID, lastUser.id))
 
           const lastAssistantMsg = msgs.findLast(
             (msg) => msg.info.role === "assistant" && msg.info.id === lastAssistant?.id,
@@ -1375,6 +1402,7 @@ const layer = Layer.effect(
           continue
         }
 
+        yield* Effect.sync(() => runTarget.delete(sessionID))
         yield* compaction.prune({ sessionID }).pipe(Effect.ignore, Effect.forkIn(scope))
         return yield* lastAssistant(sessionID)
       },
