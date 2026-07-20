@@ -1617,13 +1617,13 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     return end === undefined ? 0 : Math.max(0, end - props.part.time.start)
   })
   const summary = createMemo(() => reasoningSummary(content()))
-  // While actively thinking in hide mode, show only the last ~18 lines (a bounded live window,
+  // While actively thinking in hide mode, show only the last ~5 lines (a small bounded live window,
   // like Claude) so a long think doesn't flood the terminal; full text once done or in show mode.
   const bodyText = createMemo(() => {
     const body = summary().body
     if (isDone() || !inMinimal()) return body
     const lines = body.split("\n")
-    return lines.length > 18 ? lines.slice(-18).join("\n") : body
+    return lines.length > 5 ? lines.slice(-5).join("\n") : body
   })
   const syntax = createSyntaxStyleMemo(() => generateSubtleSyntax(theme))
 
