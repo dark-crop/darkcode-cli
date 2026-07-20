@@ -2136,18 +2136,13 @@ function Write(props: ToolProps) {
   return (
     <Switch>
       <Match when={props.metadata.diagnostics !== undefined}>
-        <BlockTool title={"# Wrote " + pathFormatter.format(stringValue(props.input.filePath))} part={props.part}>
-          <line_number fg={theme.textMuted} minWidth={3} paddingRight={1}>
-            <code
-              conceal={false}
-              fg={theme.text}
-              filetype={filetype(stringValue(props.input.filePath))}
-              syntaxStyle={syntax()}
-              content={code()}
-            />
-          </line_number>
-          <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
-        </BlockTool>
+        {/* Done: compact one-line summary (line count) + any diagnostics - NOT the full file
+            content, which for a large write is far too long to dump into the transcript. */}
+        <InlineTool icon="←" pending="" complete={true} part={props.part}>
+          Wrote {pathFormatter.format(stringValue(props.input.filePath))}
+          <Show when={code()}> ({code().split("\n").length} lines)</Show>
+        </InlineTool>
+        <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
       </Match>
       <Match when={true}>
         <InlineTool
