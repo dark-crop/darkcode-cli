@@ -154,6 +154,7 @@ const layer: Layer.Layer<
 
     const system = Effect.fn("Instruction.system")(function* () {
       const config = yield* cfg.get()
+      const ctx = yield* InstanceState.context
       const paths = yield* systemPaths()
       const urls = (config.instructions ?? []).filter(
         (item) => item.startsWith("https://") || item.startsWith("http://"),
@@ -162,7 +163,25 @@ const layer: Layer.Layer<
       const files = yield* Effect.forEach(Array.from(paths), read, { concurrency: 8 })
       const remote = yield* Effect.forEach(urls, fetch, { concurrency: 4 })
 
+      // Persistent memory: inject the MEMORY.md index (global + project). The index is one line per
+      // memory; the agent recalls a memory's full body on demand with the `memory` tool, and saves
+      // durable new facts with it. `read` returns "" for a missing file, so this is a no-op until used.
+      const globalMem = (yield* read(path.join(global.config, "memory", "MEMORY.md"))).trim()
+      const projectMem = (yield* read(path.join(ctx.worktree, ".darkcode", "memory", "MEMORY.md"))).trim()
+      const memoryBlock =
+        globalMem || projectMem
+          ? [
+              "# Memory index (persistent across sessions)",
+              "These are facts you have chosen to remember. Recall a memory's full body with the `memory` tool (action: recall) when its hook is relevant; save durable new facts with it (action: save).",
+              globalMem ? "## Global memory - about the user\n" + globalMem : "",
+              projectMem ? "## Project memory - this repo\n" + projectMem : "",
+            ]
+              .filter(Boolean)
+              .join("\n\n")
+          : undefined
+
       return [
+        ...(memoryBlock ? [memoryBlock] : []),
         ...Array.from(paths).flatMap((item, i) => (files[i] ? [`Instructions from: ${item}\n${files[i]}`] : [])),
         ...urls.flatMap((item, i) => (remote[i] ? [`Instructions from: ${item}\n${remote[i]}`] : [])),
       ]

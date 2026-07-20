@@ -1,0 +1,28 @@
+Persistent memory across sessions. You have a memory store whose index is shown to you at the
+start of every session (under "Memory index"). Use this tool to save durable facts and to recall a
+memory's full content when its index line looks relevant.
+
+WHEN TO SAVE (`action: "save"`)
+Save a fact only when it is durable and useful to remember in a FUTURE session - not something
+specific to the current task. Good candidates:
+- who the user is, their preferences, and how they want you to work (tone, tools, conventions)
+- decisions, constraints, or context that isn't derivable from the code or git history
+- pointers to external resources (URLs, dashboards, tickets)
+Do NOT save: ephemeral task details, secrets, or anything already in the repo/CLAUDE.md/AGENTS.md.
+
+SCOPE
+- `scope: "global"` - facts about the USER, shared across all projects (~/.config/darkcode/memory/).
+- `scope: "project"` - facts about THIS repo (<repo>/.darkcode/memory/).
+
+RECALL (`action: "recall"`)
+The index only shows a one-line hook per memory. When a hook is relevant to the current task, call
+recall with its `slug` to load the full body into context. (Quick facts may be clear from the hook
+alone - only recall when you need the detail.)
+
+FIELDS
+- `slug`: kebab-case id (e.g. "prefers-bun"). Reusing an existing slug UPDATES that memory.
+- `description`: (save) the one-line hook for the index - make it specific enough to judge relevance.
+- `body`: (save) the fact itself, in markdown.
+
+Before saving, check the index for an existing memory that already covers the fact and update that
+slug instead of creating a near-duplicate. Delete (`action: "delete"`) a memory that becomes wrong.
