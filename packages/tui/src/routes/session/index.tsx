@@ -1617,6 +1617,14 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     return end === undefined ? 0 : Math.max(0, end - props.part.time.start)
   })
   const summary = createMemo(() => reasoningSummary(content()))
+  // While actively thinking in hide mode, show only the last ~18 lines (a bounded live window,
+  // like Claude) so a long think doesn't flood the terminal; full text once done or in show mode.
+  const bodyText = createMemo(() => {
+    const body = summary().body
+    if (isDone() || !inMinimal()) return body
+    const lines = body.split("\n")
+    return lines.length > 18 ? lines.slice(-18).join("\n") : body
+  })
   const syntax = createSyntaxStyleMemo(() => generateSubtleSyntax(theme))
 
   const toggle = () => {
@@ -1642,14 +1650,16 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
             duration={isDone() ? Locale.duration(duration()) : undefined}
           />
         </box>
-        <Show when={(!inMinimal() || expanded()) && summary().body}>
+        {/* Show the thinking LIVE while it streams (each step, like Claude), then collapse to the
+            "Thought: Xs" summary once done - unless in show-mode or manually expanded, where it stays. */}
+        <Show when={summary().body && (!isDone() || !inMinimal() || expanded())}>
           <box paddingLeft={inMinimal() ? 2 : 0} marginTop={1}>
             <code
               filetype="markdown"
               drawUnstyledText={false}
               streaming={true}
               syntaxStyle={syntax()}
-              content={summary().body}
+              content={bodyText()}
               conceal={ctx.conceal()}
               fg={theme.textMuted}
             />
