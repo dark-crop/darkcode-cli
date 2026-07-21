@@ -67,25 +67,67 @@ info "Linked $BIN_DIR/darkcode -> $INSTALL_DIR/darkcode"
 touch "$INSTALL_DIR/.darkcode-managed"
 date +%s > "$INSTALL_DIR/.last-update-check" 2>/dev/null || true
 
-# 5. PATH hint if the bin dir is not already on PATH.
-case ":$PATH:" in
-  *":$BIN_DIR:"*) ON_PATH=1 ;;
-  *) ON_PATH=0 ;;
-esac
+# 5. Put BOTH Bun and darkcode on PATH automatically, by appending to the login shell's rc file.
+#    This is the whole point of "fully auto": a fresh terminal just works, with zero hand-editing.
+#    Idempotent (a marker guards re-runs). Opt out with DARKCODE_NO_PATH=1.
+rc_file_for_shell() {
+  case "$(basename "${SHELL:-sh}")" in
+    zsh)  printf '%s' "${ZDOTDIR:-$HOME}/.zshrc" ;;
+    bash) [ "$(uname 2>/dev/null)" = "Darwin" ] && printf '%s' "$HOME/.bash_profile" || printf '%s' "$HOME/.bashrc" ;;
+    fish) printf '%s' "$HOME/.config/fish/config.fish" ;;
+    *)    printf '%s' "$HOME/.profile" ;;
+  esac
+}
+on_path() { case ":$PATH:" in *":$1:"*) return 0 ;; *) return 1 ;; esac; }
+
+RC="$(rc_file_for_shell)"
+MARKER="# added by the darkcode installer"
+append_path_block() {
+  # $1 = rc path. $PATH is escaped so it stays literal in the file (expanded at shell startup).
+  case "$1" in
+    *config.fish)
+      cat >> "$1" <<EOF
+
+$MARKER
+set -gx BUN_INSTALL "$BUN_INSTALL"
+fish_add_path "$BUN_INSTALL/bin" "$BIN_DIR"
+EOF
+      ;;
+    *)
+      cat >> "$1" <<EOF
+
+$MARKER
+export BUN_INSTALL="$BUN_INSTALL"
+export PATH="$BUN_INSTALL/bin:$BIN_DIR:\$PATH"
+EOF
+      ;;
+  esac
+}
+
+if [ "${DARKCODE_NO_PATH:-0}" != "1" ]; then
+  mkdir -p "$(dirname "$RC")" 2>/dev/null || true
+  if [ -f "$RC" ] && grep -qF "$MARKER" "$RC" 2>/dev/null; then
+    info "PATH already set up in $RC"
+  elif append_path_block "$RC" 2>/dev/null; then
+    info "Added Bun + darkcode to your PATH in $RC"
+  fi
+fi
 
 printf '\n\033[35mdarkcode installed.\033[0m\n\n'
-if [ "$ON_PATH" -eq 0 ]; then
+if on_path "$BIN_DIR" && command -v bun >/dev/null 2>&1; then
   cat <<EOF
-Add it to your PATH - put this in your ~/.zshrc or ~/.bashrc:
-
-    export PATH="$BIN_DIR:\$PATH"
-
-then open a new terminal (or run that line now). After that:
-
-EOF
-fi
-cat <<EOF
     darkcode --version
     darkcode            # start the TUI, then /login to sign in
-
 EOF
+else
+  cat <<EOF
+One step left - load the new PATH into THIS terminal (new terminals are already set up):
+
+    source $RC
+
+then:
+
+    darkcode --version
+    darkcode            # start the TUI, then /login to sign in
+EOF
+fi
