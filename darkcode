@@ -26,6 +26,23 @@ if [ ! -d "$OC/node_modules" ] && [ ! -d "$ROOT/node_modules" ]; then
   exit 1
 fi
 
+# ── Raise the file-descriptor limit ──────────────────────────────────────────
+# Bun + darkcode open many files. macOS defaults the SOFT limit to 256, which crashes startup with
+# "An unknown error occurred, possibly due to low max file descriptors". Raise the soft limit toward
+# the hard limit so nobody has to run `ulimit` by hand. We target a sane 10240 and NEVER the
+# multi-billion value some error hints suggest - a limit that huge makes code that sizes buffers to
+# the fd count misbehave (that is usually the *second* "unknown error" people hit). Failures
+# (already-high, or a locked-down machine) are ignored, and we never lower an existing higher limit.
+_fd_cur="$(ulimit -Sn 2>/dev/null || echo 256)"
+case "$_fd_cur" in
+  unlimited) : ;;
+  ''|*[!0-9]*) ulimit -Sn 10240 2>/dev/null || true ;;
+  *) if [ "$_fd_cur" -lt 10240 ]; then
+       ulimit -Sn 10240 2>/dev/null || ulimit -Sn "$(ulimit -Hn 2>/dev/null || echo "$_fd_cur")" 2>/dev/null || true
+     fi ;;
+esac
+unset _fd_cur
+
 # ── Background auto-update (managed installs only) ───────────────────────────
 # Like Claude Code: on launch we quietly fetch the latest source in the background so the NEXT
 # start runs it. Guarded so it ONLY touches installs created by install.sh (the .darkcode-managed
