@@ -2054,9 +2054,9 @@ function Shell(props: ToolProps) {
   const isRunning = createMemo(() => props.part.state.status === "running")
   const output = createMemo(() => stripAnsi(stringValue(props.metadata.output)?.trim() ?? ""))
   const [expanded, setExpanded] = createSignal(false)
-  // Command output shows at most 5 lines collapsed, 12 when expanded. The overflow affordance is keyed
-  // to the collapsed (5-line) threshold so the toggle stays put regardless of expand state.
-  const collapsedLines = 5
+  // Command output shows just 1 line collapsed, 12 when expanded. The overflow affordance is keyed
+  // to the collapsed (1-line) threshold so the toggle stays put regardless of expand state.
+  const collapsedLines = 1
   const expandedLines = 12
   const maxChars = (n: number) => n * Math.max(20, ctx.width - 6)
   const overflow = createMemo(() => collapseToolOutput(output(), collapsedLines, maxChars(collapsedLines)).overflow)
