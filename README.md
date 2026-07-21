@@ -91,6 +91,8 @@ flowchart LR
 | ⚡ **Everything is live** | Reasoning streams **above** the answer step-by-step, writes render as a live green diff, shell output streams in - then each turn ends with a `* <sign-off> (<time>)` run-time line. |
 | ⛓ **Real message queue** | Stack prompts while it's busy and they run **in order** (FIFO); Esc interrupts the current turn and the rest of the queue keeps going. |
 | 🧠 **Persistent memory** | An agent memory tool (global + per-project) - darkcode remembers facts across sessions the way it reads `AGENTS.md`. |
+| 🔦 **Code-aware (LSP)** | Go-to-definition, references, hover, and workspace symbols are wired in, and diagnostics surface after every edit - so the model navigates by **ground truth**, not guesses. |
+| 🖥 **Runs long processes** | A real background shell - start dev servers, watchers, or `tail -f` (`bash_background`), read their output as it accumulates (`bash_output`), and stop them (`bash_kill`) without blocking the turn. |
 | 🕐 **Knows who / where / when** | The agent always knows your local date, time, timezone, approximate location, and language - derived from your system timezone, **no IP-geolocation or network call**. |
 | 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, and the pasted key is masked. |
 | 🟣 **Power-purple, Claude Code-style** | Scrolling mascot header, clean divider-framed input, one sassy live "working" verb. |
