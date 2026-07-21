@@ -248,8 +248,11 @@ const layer = Layer.effect(
             tool.skill,
             tool.memory,
             tool.patch,
+            // LSP is ON by default in darkcode (not gated behind the experimental flag): the local A3B
+            // model benefits hugely from ground-truth symbol nav (definition/references/hover) instead
+            // of guessing. Diagnostics already auto-surface after write/edit; this adds the nav tool.
+            tool.lsp,
             ...(tool.execute ? [tool.execute] : []),
-            ...(flags.experimentalLspTool ? [tool.lsp] : []),
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,
