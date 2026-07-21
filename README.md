@@ -50,10 +50,11 @@ machine you own.** It is a hard-locked terminal client for the self-hosted
 own image pipeline, on your own GPU box. A fresh install talks to **one gateway and nothing else**: no
 OpenAI, no Anthropic, no telemetry to a third party.
 
-It keeps the whole [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP, sub-agents,
-sessions) and layers on a small, well-contained set of changes: the provider lock, an isolated config
-dir, a Claude Code-style interface, one native-vLLM model with effort tiers, browser sign-in, and **local image
-generation / editing / pose-transfer as first-class agent tools.**
+It builds on the proven [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP,
+sub-agents, sessions) but has grown into its own thing on top: the provider lock, an isolated config
+dir, a fully live Claude Code-style interface (streaming reasoning, live diffs, a real FIFO prompt
+queue), one native-vLLM model with effort tiers, persistent cross-session memory, browser sign-in, and
+**local image generation / editing / pose-transfer as first-class agent tools.**
 
 ```mermaid
 flowchart LR
@@ -87,6 +88,9 @@ flowchart LR
 | 🧠 **One model, four efforts** | One native-vLLM lane - **Mr. President 1.1** (full 262K context) - and `/effort` picks the reasoning tier (low → ultra). The model name comes **live from the gateway**, never hardcoded. |
 | 👁 **Every lane reads images** | Attach a screenshot and ask - all chat lanes have vision built in. |
 | 🎨 **Images as tools** | Generate, edit, **re-pose**, and **inpaint** images inline - the agent calls them when you ask. |
+| ⚡ **Everything is live** | Reasoning streams **above** the answer step-by-step, writes render as a live green diff, shell output streams in - then each turn ends with a `* <sign-off> (<time>)` run-time line. |
+| ⛓ **Real message queue** | Stack prompts while it's busy and they run **in order** (FIFO); Esc interrupts the current turn and the rest of the queue keeps going. |
+| 🧠 **Persistent memory** | An agent memory tool (global + per-project) - darkcode remembers facts across sessions the way it reads `AGENTS.md`. |
 | 🕐 **Knows who / where / when** | The agent always knows your local date, time, timezone, approximate location, and language - derived from your system timezone, **no IP-geolocation or network call**. |
 | 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, and the pasted key is masked. |
 | 🟣 **Power-purple, Claude Code-style** | Scrolling mascot header, clean divider-framed input, one sassy live "working" verb. |
@@ -153,8 +157,8 @@ darkcode run --model dark-llm/president-low "explain this stack trace"
 
 ## Models
 
-One chat lane - **Mr. President 1.1** (native vLLM: uncensored Qwen3.6-27B, NVFP4 + speculative
-decoding, full 262K context) - across four effort tiers. A model id is `<lane>-<tier>`
+One chat lane - **Mr. President 1.1** (native vLLM: uncensored Qwen3.6 **35B-A3B MoE**, ~3B active
+params, NVFP4 + speculative decoding) - across four effort tiers. A model id is `<lane>-<tier>`
 (e.g. `president-med`).
 
 | Tier | Thinking | Context |
@@ -199,6 +203,8 @@ Results save as PNG in your workspace. The first image call asks a one-time perm
 | `/model` | Pick the model lane (currently Mr. President 1.1) |
 | `/effort` | Pick the tier - low / med / high / ultra |
 | `/image <prompt>` | Generate or edit an image (natural language works too) |
+| `/init` | Investigate the repo and write a compact `AGENTS.md` (shows just `/init`, not the prompt) |
+| `/review [target]` | Review changes (uncommitted / commit / branch / PR) |
 | `/context` | Context-window usage: segmented bar, token breakdown, cost |
 
 ## The interface
@@ -224,7 +230,10 @@ A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 - **Scrolling mascot header** - pixel face + model + cwd, scrolls with the chat (not pinned).
 - **Clean input** - full-width dividers frame a `›` indicator; no shaded box, no placeholder.
 - **One live "working" verb** - a block spinner + a rotating, faintly sassy verb + `(elapsed · ↓ tokens)`.
-- **Quiet reasoning** - a muted `Thought: Xs` renders *below* the answer once done.
+- **Live reasoning** - thinking streams *above* the answer as the model works (click to expand the last
+  12 lines); each finished turn closes with a muted `* <sassy sign-off> (<total time>)` line.
+- **Live tools** - a running `write` shows the file streaming in as a green diff; shell output streams in
+  and collapses to a single line (click to expand). No mid-token flicker.
 
 The whole app is themed from one accent (`#a855f7` dark, `#7c3aed` light) defined once in
 `packages/tui/src/theme/assets/darkcode.json`. See [docs/ui.md](docs/ui.md).
@@ -260,11 +269,13 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 
 ## Relationship to opencode
 
-darkcode is a downstream **fork of [opencode](https://github.com/sst/opencode)**. It keeps the entire
-agent engine and layers on the provider lock, isolated config, the power-purple Claude Code-style UI,
-two-axis model control, the browser login, and the image tools. Internal package names
-(`@opencode-ai/*`) are kept compatible to keep upstream merges tractable. Credit for the underlying
-agent belongs to the opencode team. It is **not affiliated with or endorsed by** opencode.
+darkcode started as a **fork of [opencode](https://github.com/sst/opencode)** and has diverged
+substantially: the hard provider lock, isolated config, the power-purple Claude Code-style UI with
+live streaming reasoning / diffs / a real FIFO prompt queue, single-model effort tiers, persistent
+memory, the browser login, and the image tools. It still rides on the opencode agent engine, and
+internal package names (`@opencode-ai/*`) are kept compatible so upstream improvements stay mergeable.
+Credit for the underlying agent belongs to the opencode team. It is **not affiliated with or endorsed
+by** opencode.
 
 ## Status
 
