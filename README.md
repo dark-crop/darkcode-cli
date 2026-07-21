@@ -46,7 +46,7 @@ on. Already installed before auto-update existed? Run the line once more to enab
 
 Most coding agents route your code and prompts through a vendor's cloud. **darkcode routes them to a
 machine you own.** It is a hard-locked terminal client for the self-hosted
-[**Dark-LLM**](https://github.com/dark-crop/dark-core) gateway - your own uncensored Qwen models, your
+[**Dark-LLM**](https://github.com/dark-crop/dark-core) gateway - your own uncensored models, your
 own image pipeline, on your own GPU box. A fresh install talks to **one gateway and nothing else**: no
 OpenAI, no Anthropic, no telemetry to a third party.
 
@@ -157,9 +157,8 @@ darkcode run --model dark-llm/president-low "explain this stack trace"
 
 ## Models
 
-One chat lane - **Mr. President 1.1** (native vLLM: uncensored Qwen3.6 **35B-A3B MoE**, ~3B active
-params, NVFP4 + speculative decoding) - across four effort tiers. A model id is `<lane>-<tier>`
-(e.g. `president-med`).
+One chat lane - **Mr. President 1.1**, your own uncensored, tool-capable model served natively on your
+GPU box - across four effort tiers. A model id is `<lane>-<tier>` (e.g. `president-med`).
 
 | Tier | Thinking | Context |
 |---|---|---|

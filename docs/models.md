@@ -17,7 +17,7 @@ One native-vLLM lane, vision-capable (reads images directly via its own vision t
 
 | Lane | Family (`<family>`) | Backing model | Best for |
 | --- | --- | --- | --- |
-| **Mr. President 1.1** | `president` | AEON Qwen3.6-27B (uncensored, NVFP4 + DFlash speculative decoding) | Coding, tools, complex tasks - the workhorse |
+| **Mr. President 1.1** | `president` | your own uncensored model, served natively on the gateway | Coding, tools, complex tasks - the workhorse |
 
 Every tier gets the full native **262K** context window.
 

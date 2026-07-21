@@ -46,7 +46,7 @@ model catalog. It exposes chat lanes that each span four effort tiers:
 
 | Lane | Family id | Character | Reasoning tiers |
 | --- | --- | --- | --- |
-| Mr. President 1.1 | `president` | AEON Qwen3.6-27B, native vLLM (NVFP4 + DFlash), the default | high, ultra |
+| Mr. President 1.1 | `president` | your own uncensored model, served natively on the gateway, the default | high, ultra |
 
 The one chat lane has `low`, `med`, `high`, and `ultra` tiers, so a model id is composed
 as `<family>-<tier>`, e.g. `president-high` (the default). The tiers set the reasoning
