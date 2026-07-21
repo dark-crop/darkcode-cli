@@ -93,6 +93,7 @@ flowchart LR
 | 🧠 **Persistent memory** | An agent memory tool (global + per-project) - darkcode remembers facts across sessions the way it reads `AGENTS.md`. |
 | 🔦 **Code-aware (LSP)** | Go-to-definition, references, hover, and workspace symbols are wired in, and diagnostics surface after every edit - so the model navigates by **ground truth**, not guesses. |
 | 🖥 **Runs long processes** | A real background shell - start dev servers, watchers, or `tail -f` (`bash_background`), read their output as it accumulates (`bash_output`), and stop them (`bash_kill`) without blocking the turn. |
+| 🧭 **Real browser, built in** | Drives an actual Chrome - **act** on pages (Playwright: navigate/click/type/fill) and **inspect** them (Chrome DevTools: network, console, cookies, Lighthouse) to find leaks and harden your app. A `browser` skill routes between them. Runs locally; the model stays Dark LLM. |
 | 🕐 **Knows who / where / when** | The agent always knows your local date, time, timezone, approximate location, and language - derived from your system timezone, **no IP-geolocation or network call**. |
 | 🌐 **Browser sign-in** | `/login` opens a self-contained page: username/password → token, and the pasted key is masked. |
 | 🟣 **Power-purple, Claude Code-style** | Scrolling mascot header, clean divider-framed input, one sassy live "working" verb. |
