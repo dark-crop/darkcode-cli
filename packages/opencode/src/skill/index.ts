@@ -34,6 +34,49 @@ const CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION =
   "Use ONLY when the user is editing or creating opencode's own configuration: opencode.json, opencode.jsonc, files under .opencode/, or files under ~/.config/opencode/. Also use when creating or fixing opencode agents, subagents, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring opencode itself."
 const CUSTOMIZE_OPENCODE_SKILL_BODY = SkillPlugin.CustomizeOpencodeContent
 
+// Routes browser work between the two baked-in MCP servers (playwright = act, chrome-devtools =
+// inspect) and gives the local model a methodical see->act->verify workflow.
+const BROWSER_SKILL_NAME = "browser"
+const BROWSER_SKILL_DESCRIPTION =
+  "Use whenever the task involves a real web browser: opening or using a website, navigating, filling forms, clicking, logging in, or replying in a web chat; OR inspecting a web app for security - network requests, console, cookies/storage, data leaks, or a Lighthouse audit. Explains which browser tools to use and how."
+const BROWSER_SKILL_BODY = [
+  "# Driving a real browser",
+  "",
+  "darkcode has TWO browser toolsets, both driving a real Chrome. Pick by the job:",
+  "",
+  "## Which toolset",
+  "- ACTING on a page (open a site, navigate, click, type, fill a form, log in, submit, reply in a web",
+  "  chat): use the **playwright** tools. They wait for elements and target by accessibility ref, so",
+  "  they stay reliable on dynamic pages.",
+  "- INSPECTING / SECURITY (find leaks, see what data a page sends, read network requests, console",
+  "  errors, cookies/storage, run a Lighthouse audit): use the **chrome-devtools** tools - the full",
+  "  DevTools surface.",
+  "",
+  'If the user names a tool ("use playwright", "use devtools"), obey. Otherwise route by the job above.',
+  "",
+  "## Workflow (be methodical)",
+  "1. SNAPSHOT or SCREENSHOT first to see the page before acting. Never act blind.",
+  "2. Do ONE action, then snapshot/screenshot again to CONFIRM it worked. If nothing changed, retry or",
+  "   pick a different element.",
+  "3. Handle web friction: dismiss cookie/consent banners and popups, wait for load, scroll to reveal",
+  "   off-screen elements.",
+  "4. Keep going until the task is done, then report the result plainly.",
+  "",
+  "## Finding leaks / hardening an app (chrome-devtools)",
+  "Navigate to the page (log in first if needed), then inspect:",
+  "- network requests -> secrets/tokens in URLs, query params, or headers; third-party calls; missing",
+  "  HTTPS; over-broad CORS.",
+  "- console messages -> CSP violations, mixed-content warnings, logged secrets, errors.",
+  "- cookies/storage -> sensitive data in localStorage; cookies missing HttpOnly/Secure/SameSite.",
+  "- a Lighthouse audit -> best-practices / security findings.",
+  "Report concrete findings (what leaked, where, and the fix), not a generic summary.",
+  "",
+  "## Notes",
+  "- These tools run locally; only the model is Dark LLM. The browser talks to sites directly.",
+  "- The two toolsets may open separate Chrome windows. To inspect the EXACT page you just acted on, do",
+  "  the whole flow with the chrome-devtools tools (they can also navigate and click).",
+].join("\n")
+
 export const Info = Schema.Struct({
   name: Schema.String,
   description: Schema.optional(Schema.String),
@@ -280,6 +323,12 @@ const layer = Layer.effect(
           description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
           location: "<built-in>",
           content: CUSTOMIZE_OPENCODE_SKILL_BODY,
+        }
+        s.skills[BROWSER_SKILL_NAME] = {
+          name: BROWSER_SKILL_NAME,
+          description: BROWSER_SKILL_DESCRIPTION,
+          location: "<built-in>",
+          content: BROWSER_SKILL_BODY,
         }
         yield* loadSkills(s, yield* InstanceState.get(discovered), events)
         return s

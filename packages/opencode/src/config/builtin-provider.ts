@@ -128,5 +128,23 @@ export function darkLlmBuiltinConfig(): ConfigV1.Info {
         models: darkLlmModels(),
       },
     },
+    // Real browser, baked in. Two local MCP servers driving Chrome (started lazily on first browser
+    // tool use, not at launch): PLAYWRIGHT for ACTING on pages (navigate/click/type/fill - robust
+    // auto-waiting + accessibility refs) and CHROME-DEVTOOLS for INSPECTING (network/console/storage/
+    // Lighthouse - finding leaks + hardening an app). The `browser` built-in skill routes between them.
+    // The model stays locked to Dark LLM; these tools run locally, so the lock is intact. Each needs
+    // Node/npx + Chrome available; disable with `mcp: { "chrome-devtools": { enabled: false } }`.
+    mcp: {
+      playwright: {
+        type: "local",
+        command: ["npx", "-y", "@playwright/mcp@latest"],
+        enabled: true,
+      },
+      "chrome-devtools": {
+        type: "local",
+        command: ["npx", "-y", "chrome-devtools-mcp@latest"],
+        enabled: true,
+      },
+    },
   }
 }
