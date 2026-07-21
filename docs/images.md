@@ -1,8 +1,8 @@
 # Images
 
-darkcode can **create and change images inline**, as a first-class agent tool. You just ask in plain
-language and the model calls the `image` tool; the gateway runs the workflow on your GPU box and the
-result is saved into your workspace. There is also an `/image` shortcut.
+darkcode can **create and change images inline**, as a first-class agent tool. There is no `/image`
+command - you just ask in plain language and the model calls the `image` tool itself; the gateway runs
+the workflow on your GPU box and the result is saved into your workspace.
 
 All of this runs on **your** Dark-LLM gateway - no third-party image service.
 
@@ -24,7 +24,7 @@ Describe the image; optionally give a size or aspect ratio.
 
 ```
 generate a purple robot mascot, square
-/image a wide 16:9 landscape of neon mountains
+make a wide 16:9 landscape of neon mountains
 make a 512x512 icon of a fox, save it to ./assets/fox.png
 ```
 
@@ -99,6 +99,16 @@ Attach **two images**:
   *outside* your project folder, you get a second prompt naming that folder - a safety guard on
   model-controlled paths.
 
+## Vision vs. the image tool
+
+Attaching an image does **not** always mean "make an image". darkcode's rule:
+
+- **Vision (no tool):** you drop a screenshot/photo and want darkcode to *read* it or *act on what it
+  shows* - "what is this", "build this UI", "fix the bug in this screenshot", "extract the text". It
+  just looks and answers / writes code. No image is produced.
+- **Image tool:** you want an image *out* - "generate ...", "edit this photo: ...", "make her do this
+  pose", "inpaint the masked area". Then it calls the tool.
+
 ## Nudging the model
 
 The models are local and less reliable at tool-calling than a frontier model. If it *describes* an
@@ -106,7 +116,7 @@ image instead of making one, be explicit:
 
 ```
 use the image tool to generate ...
-/image ...                        # the /image command always triggers the tool
+edit this image: <change>          # 'edit this image' reliably triggers the edit mode
 ```
 
 For pose, remember the order: **person first, pose second.** For inpaint: **base first, mask second.**

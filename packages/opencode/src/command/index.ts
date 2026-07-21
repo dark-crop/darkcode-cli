@@ -9,7 +9,6 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
-import PROMPT_IMAGE from "./template/image.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
 
 type State = {
@@ -47,7 +46,6 @@ export function hints(template: string) {
 export const Default = {
   INIT: "init",
   REVIEW: "review",
-  IMAGE: "image",
 } as const
 
 export interface Interface {
@@ -87,15 +85,6 @@ const layer = Layer.effect(
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
-      }
-      commands[Default.IMAGE] = {
-        name: Default.IMAGE,
-        description: "generate or edit an image from a prompt",
-        source: "command",
-        get template() {
-          return PROMPT_IMAGE
-        },
-        hints: hints(PROMPT_IMAGE),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {

@@ -1,1 +1,0 @@
-Generate or edit an image with the `image` tool (edit the attached image if one is given): $ARGUMENTS

@@ -175,21 +175,26 @@ See [docs/models.md](docs/models.md).
 
 ## Images
 
-darkcode can **make and change images inline** - the agent calls the `image` tool when you ask, or use
-the `/image` shortcut. The edit/pose modes keep your subject's identity by conditioning on your real photo.
+darkcode can **make and change images inline** - just ask in plain language and the agent calls the
+`image` tool itself (no command to remember). The edit/pose modes keep your subject's identity by
+conditioning on your real photo.
 
-| Mode | How to use | Behind it |
+| Mode | Just say | Behind it |
 |---|---|---|
 | 🖼 **Generate** | `generate a purple robot icon, 16:9` | Z-Image Turbo (~24 s) |
-| ✏️ **Edit** | *attach a photo* → `replace her shirt with a party dress` | Qwen-Image-Edit-2511 + Lightning (~10-15 s) |
+| ✏️ **Edit** | *attach a photo* → `edit this: replace her shirt with a party dress` | Qwen-Image-Edit-2511 + Lightning (~10-15 s) |
 | 🤸 **Pose** | *attach person + pose image* → `make her do this pose` | AnyPose - copies the pose, keeps identity |
 | 🩹 **Inpaint** | *attach image + mask* → `put a balloon in the white area` | Qwen-Image AliMama inpaint ControlNet - masked region only |
 
 ```
-/image a wide 16:9 landscape of neon mountains       # generate (name a ratio or WxH)
-[attach photo]  add a party hat on her head          # edit - attached image used automatically
-[attach person] [attach pose]  copy this pose        # pose - person first, pose second
+make a wide 16:9 landscape of neon mountains         # generate (name a ratio or WxH)
+[attach photo]  edit this - add a party hat           # edit - attached image used automatically
+[attach person] [attach pose]  copy this pose         # pose - person first, pose second
 ```
+
+**Vision vs. image tool:** if you drop a screenshot and ask darkcode to *read* it or *act on what it
+shows* ("what is this", "build this UI", "fix this bug"), it just **looks** (vision) - no image is made.
+It only calls the image tool when you actually want an image *out* (generate / edit / pose / inpaint).
 
 Results save as PNG in your workspace. The first image call asks a one-time permission. See
 [docs/images.md](docs/images.md).
@@ -201,7 +206,6 @@ Results save as PNG in your workspace. The first image call asks a one-time perm
 | `/login` · `/logout` | Browser sign-in (in-page user/pass → token) · sign out |
 | `/model` | Pick the model lane (currently Mr. President 1.1) |
 | `/effort` | Pick the tier - low / med / high / ultra |
-| `/image <prompt>` | Generate or edit an image (natural language works too) |
 | `/init` | Investigate the repo and write a compact `AGENTS.md` (shows just `/init`, not the prompt) |
 | `/review [target]` | Review changes (uncommitted / commit / branch / PR) |
 | `/context` | Context-window usage: segmented bar, token breakdown, cost |
@@ -260,7 +264,7 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 |---|---|
 | [install.md](docs/install.md) | Build from source, the launcher + required preload, PATH, troubleshooting. |
 | [models.md](docs/models.md) | Lanes, tiers, `/model` / `/effort`, the live model list. |
-| [images.md](docs/images.md) | The `image` tool + `/image`: generate, edit, pose. |
+| [images.md](docs/images.md) | The `image` tool (agent-called): generate, edit, pose, inpaint. |
 | [auth.md](docs/auth.md) | `/login` (in-page browser flow) and `/logout`, key storage, `DARK_LLM_KEY`. |
 | [context.md](docs/context.md) | The `/context` usage bar. |
 | [ui.md](docs/ui.md) | The Claude Code-style interface and the power-purple theme. |
