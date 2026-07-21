@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Claude Code-style TUI &nbsp;·&nbsp; one hard-locked gateway &nbsp;·&nbsp; local image generate / edit / re-pose baked in
+  Claude Code-style TUI &nbsp;·&nbsp; one hard-locked gateway &nbsp;·&nbsp; a real browser, image generation, and a background shell baked in
 </p>
 
 <p align="center">
@@ -20,6 +20,7 @@
   <a href="#the-unlock">The unlock</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#models">Models</a> ·
+  <a href="#browser">Browser</a> ·
   <a href="#images">Images</a> ·
   <a href="#commands">Commands</a> ·
   <a href="#the-lock">The lock</a> ·
@@ -53,8 +54,10 @@ OpenAI, no Anthropic, no telemetry to a third party.
 It builds on the proven [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP,
 sub-agents, sessions) but has grown into its own thing on top: the provider lock, an isolated config
 dir, a fully live Claude Code-style interface (streaming reasoning, live diffs, a real FIFO prompt
-queue), one native-vLLM model with effort tiers, persistent cross-session memory, browser sign-in, and
-**local image generation / editing / pose-transfer as first-class agent tools.**
+queue), one native-vLLM model with effort tiers, and a fully-armed toolbelt - a **real browser**
+(drive and inspect any page), a **background shell** (dev servers, watchers), **code-aware LSP
+navigation**, persistent cross-session **memory**, and **local image generation / editing /
+pose-transfer** - all as first-class agent tools, all pointed at hardware you own.
 
 ```mermaid
 flowchart LR
@@ -66,15 +69,19 @@ flowchart LR
         MP["Mr. President 1.1 · 262K"]
         EF["effort: low · med · high · ultra"]
     end
-    subgraph img["image tools"]
+    subgraph img["image tools (on the gateway)"]
         direction TB
-        GEN["generate · z-image"]
-        EDT["edit · Qwen-Image-Edit"]
-        POSE["pose · AnyPose"]
-        INP["inpaint · AliMama CN"]
+        GEN["generate · edit · pose · inpaint"]
+    end
+    subgraph tools["local agent tools (your machine)"]
+        direction TB
+        BR["browser · act + inspect"]
+        SH["shell · background procs"]
+        CODE["read / edit · grep · LSP · memory"]
     end
     G --> lanes
     G --> img
+    DC --> tools
 
     classDef hub fill:#a855f7,stroke:#7c3aed,stroke-width:2px,color:#fff
     class G hub
@@ -175,6 +182,29 @@ Every tier gets the full native **262K** window; they differ only in how much th
 + `/model/info`) - darkcode never hardcodes the model, so the picker always shows exactly what your
 key is allowed and whatever the gateway is currently serving. Falls back to a generic label offline.
 See [docs/models.md](docs/models.md).
+
+## Browser
+
+darkcode drives a **real Chrome**, not a static fetch - two purpose-built toolsets, and a `browser`
+skill that routes to the right one for the job:
+
+| You want to... | It uses | Examples |
+|---|---|---|
+| **Act** on a page | **Playwright** | navigate, click, type, fill forms, log in, reply in a web chat |
+| **Inspect** a page | **Chrome DevTools** | network requests, console, cookies/storage, Lighthouse audits |
+
+The inspect side makes darkcode a **security tool for your own app** - *"open my staging site, then show
+me every network request and any leaked token or console CSP warning."* The act side handles real
+interactive flows. Just ask in plain language (or name the tool: *"use playwright to..."*):
+
+```
+find any data leaks on https://myapp.local           # inspect - network / console / cookies / Lighthouse
+log into https://myapp.local/admin and fill the form # act - navigate + type + submit
+```
+
+Both run **locally on your machine** (only the model is Dark LLM, so the lock holds). They need Node
+and Chrome; the first browser call downloads Chrome for Testing + the tool servers. See the built-in
+`browser` skill for the see → act → verify workflow.
 
 ## Images
 
