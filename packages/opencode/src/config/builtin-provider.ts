@@ -142,7 +142,10 @@ export function darkLlmBuiltinConfig(): ConfigV1.Info {
       },
       "chrome-devtools": {
         type: "local",
-        command: ["npx", "-y", "chrome-devtools-mcp@latest"],
+        // Curated for the local model: drop the device-emulation tools (irrelevant to act/inspect);
+        // keep Network + Performance/Lighthouse for leak-hunting + audits. Extensions/third-party/
+        // webmcp/heap categories are already off by default.
+        command: ["npx", "-y", "chrome-devtools-mcp@latest", "--categoryEmulation=false"],
         enabled: true,
       },
     },
