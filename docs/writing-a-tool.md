@@ -1,104 +1,152 @@
 # Writing a new tool
 
-A "tool" is a function the model can call (read, write, bash, image, memory, ...). Adding one is three
-steps: **define** it, **register** it, and (optionally) give it **custom rendering** in the TUI. Tools
-live in `packages/opencode/src/tool/`. Read `todo.ts` for the smallest real example and
-`background-shell.ts` for a fuller one (services, live output, a companion tool).
+A "tool" is a function the model can call (read, write, bash, image, memory, ...). Adding one is
+**4 edits + 2 new files**. Do the steps below IN ORDER and exactly. Do not skip the registration
+step - a tool file that is not registered does nothing.
 
-> This codebase uses **Effect v4 (beta)**. A few names differ from Effect 3: `Effect.catch` (not
-> `catchAll`), `Schema.Literals([...])` (not `Schema.Literal(a, b)`), `Effect.tryPromise`. Prefer Effect
-> combinators over `try/catch`.
+Everything lives in `packages/opencode/src/tool/`.
+
+> Effect v4 (beta) names: use `Effect.catch` (NOT `catchAll`), `Schema.Literals([...])` (NOT
+> `Schema.Literal(a,b)`), `Effect.tryPromise`. Do not use `try/catch`.
 
 ---
 
-## 1. The shape of a tool
+## FAST PATH: copy this, rename, register
+
+We will add a tool called **`wordcount`**. To make your own tool, copy these two files, replace
+`wordcount` / `WordCount` with your name everywhere, and change the `execute` body. Then do the
+4 registry edits. Keep the pattern identical.
+
+### Step 1 - create `packages/opencode/src/tool/wordcount.txt`
+
+This file is the description the model reads. Write it AS INSTRUCTIONS to the model. Always include a
+"WHEN NOT TO USE" line.
+
+```
+Count the words in a file.
+
+WHEN TO USE: the user asks how long a file is, its word count, or a size summary.
+
+WHEN NOT TO USE: do NOT use this to read or show file contents - use the read tool for that.
+```
+
+### Step 2 - create `packages/opencode/src/tool/wordcount.ts`
+
+Copy this WHOLE file. It compiles as-is. Change only the id string, the `Parameters`, the `Metadata`,
+and the `execute` body.
 
 ```ts
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
+import DESCRIPTION from "./wordcount.txt"
 
-// The model-facing arguments. Every field's `description` is what the model reads to fill it in.
+// The arguments the model fills in. Put a clear `description` on EVERY field.
 const Parameters = Schema.Struct({
-  path: Schema.String.annotate({ description: "Absolute path to the file to inspect." }),
-  lines: Schema.optional(Schema.Number).annotate({ description: "Max lines to return (default 50)." }),
+  path: Schema.String.annotate({ description: "Absolute path to the file to count words in." }),
 })
 
-// Whatever you want to attach to the tool call for the TUI / later inspection.
+// Anything you want to keep on the tool call for the UI. Can be an empty object.
 type Metadata = { path: string; count: number }
 
 export const WordCountTool = Tool.define(
-  "wordcount", // the tool id = the name the model calls. keep it short + verb-ish.
+  "wordcount", // <- the id the model calls. short, lowercase, no spaces.
   Effect.succeed({
-    description:
-      "Count the words in a file. Use when the user asks how long a file is or wants a size summary. " +
-      "Do NOT use to read file contents - use the read tool for that.",
+    description: DESCRIPTION,
     parameters: Parameters,
-    execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
+    execute: (params: Schema.Schema.Type<typeof Parameters>, _ctx: Tool.Context<Metadata>) =>
       Effect.gen(function* () {
         const text = yield* Effect.tryPromise(() => Bun.file(params.path).text())
         const count = text.split(/\s+/).filter(Boolean).length
         return {
-          title: params.path,          // short label shown in the transcript header
+          title: params.path, // short label shown in the transcript
           metadata: { path: params.path, count },
-          output: `${count} words in ${params.path}`, // <- THIS is what the model sees back
+          output: `${count} words in ${params.path}`, // <- what the MODEL receives back
         }
       }),
   } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>),
 )
 ```
 
-That is a complete, working tool. Two things to internalize:
+The three keys `execute` must return: **`title`** (short label), **`metadata`** (your object),
+**`output`** (the string the model reads back - keep it the useful result, summarise big output like
+`Wrote foo.ts (42 lines)`).
 
-- **`output` is the tool's return value to the model** - keep it the useful result, not a human message.
-  For a big result, summarise (e.g. `Wrote foo.ts (42 lines)`), don't dump the whole thing.
-- **`description` + parameter `annotate({description})` are the only guidance the model gets.** Say what
-  the tool does, *when to use it*, and *when NOT to* (the local model needs the negative case spelled out).
+### Step 3 - register it in `packages/opencode/src/tool/registry.ts` (4 edits)
 
-### Put the description in a companion `<name>.txt` (the house convention)
+This is the step that is easy to get wrong. There are **4 places**, and the existing **`memory`** tool
+appears in ALL 4. So: find where `memory` is wired, and add your tool right next to it each time. Same
+order every time.
 
-A one-liner can stay inline as above, but anything longer belongs in a sibling text file - this is how
-almost every real tool does it (`read.txt`, `write.txt`, `task.txt`, `image.txt`, `memory.txt`, ...).
-It keeps the prose (which you will iterate on a lot, for the local model) out of the code:
-
+**Edit 3a - the import** (top of file). Find this line:
 ```ts
-import DESCRIPTION from "./wordcount.txt"   // Bun imports .txt as a string
-
-export const WordCountTool = Tool.define(
-  "wordcount",
-  Effect.succeed({
-    description: DESCRIPTION,                // <- the whole file
-    parameters: Parameters,
-    execute: (params, ctx) => Effect.gen(function* () { /* ... */ }),
-  } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>),
-)
+import { MemoryTool } from "./memory"
+```
+Add right after it:
+```ts
+import { WordCountTool } from "./wordcount"
 ```
 
-Write the `.txt` as instructions to the model: what the tool is for, the trigger cases, and an explicit
-"do NOT use this when ..." section. Read `image.txt` for a good example of the when/when-not framing.
+**Edit 3b - the bind** (inside the big `Effect.gen`). Find:
+```ts
+    const memorytool = yield* MemoryTool
+```
+Add right after it:
+```ts
+    const wordcount = yield* WordCountTool
+```
+
+**Edit 3c - the tool map** (inside `Effect.all({ ... })`). Find:
+```ts
+          memory: Tool.init(memorytool),
+```
+Add right after it:
+```ts
+          wordcount: Tool.init(wordcount),
+```
+
+**Edit 3d - the builtin array** (turns it on by default). Find:
+```ts
+            tool.memory,
+```
+Add right after it:
+```ts
+            tool.wordcount,
+```
+
+That is all 4. If you skip 3d the tool exists but is off. If you skip any of 3a-3c it will not compile.
+
+### Step 4 - typecheck
+
+```
+cd packages/opencode && bun run typecheck
+```
+
+Must be clean. If it says "Missing dependencies", your tool used a service - see "Services" below.
+
+You are done. The model can now call `wordcount`.
 
 ---
 
-## 2. When the tool needs services (config, db, spawner, ...)
+## Reference (only if the fast path is not enough)
 
-`Tool.define`'s second arg is an `Effect` that runs **once** at init. Bind services there and the
-`execute` closure captures them:
+### Services (config, database, subprocess spawner, ...)
+
+If your tool needs a service, bind it in the SECOND argument of `Tool.define` (an `Effect.gen` instead
+of `Effect.succeed`), and the `execute` closure can use it:
 
 ```ts
 import { Config } from "@/config/config"
-import { BackgroundJob } from "@/background/job"
 
 export const MyTool = Tool.define(
   "mytool",
   Effect.gen(function* () {
-    const config = yield* Config.Service          // bind services first (house style: no nested yields)
-    const background = yield* BackgroundJob.Service
+    const config = yield* Config.Service // bind services here, first, as named vars
     return {
-      description: "...",
+      description: DESCRIPTION,
       parameters: Parameters,
-      execute: (params, ctx) =>
+      execute: (params, _ctx) =>
         Effect.gen(function* () {
           const cfg = yield* config.get()
-          // ... use cfg, background, etc.
           return { title: "...", metadata: {}, output: "..." }
         }),
     } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>
@@ -106,98 +154,72 @@ export const MyTool = Tool.define(
 )
 ```
 
-If a service you yield isn't already provided to the tool layer, you must add its node to the registry
-deps (step 3) or the layer won't compile ("Missing dependencies").
+If typecheck then says **"Missing dependencies"**, that service's node is not provided to the tool
+layer yet. Add it to the `deps` array of the `node` at the BOTTOM of `registry.ts`:
+```ts
+export const node = LayerNode.make({ service: Service, layer, deps: [ /* ..., */ Config.node ] })
+```
 
----
+### The `ctx` argument
 
-## 3. The context (`ctx: Tool.Context<Metadata>`)
-
-`execute` receives the params and a context object:
+`execute(params, ctx)` gets a context object:
 
 | field | use |
 |---|---|
-| `ctx.sessionID`, `ctx.callID` | ids for the current call |
-| `ctx.abort` | an `AbortSignal` - honour it for long/streaming work so Esc actually cancels |
-| `ctx.metadata({ metadata })` | **push a live update** mid-run (streaming output, progress). Returns an `Effect`. |
-| `ctx.ask({ permission, patterns, always, metadata })` | **request permission** before a risky action (see below) |
-| `ctx.messages` | the conversation so far (rarely needed) |
+| `ctx.abort` | an `AbortSignal`. For long/streaming work, stop when it fires so Esc cancels. |
+| `ctx.metadata({ metadata })` | push a live update mid-run (streaming output/progress). Returns an `Effect`, so `yield*` it. |
+| `ctx.ask({ permission, patterns, always, metadata })` | ask permission before a risky action. Blocks until allowed. |
+| `ctx.sessionID`, `ctx.callID` | ids for this call. |
 
-For the working directory / worktree, read the instance context (NOT `ctx`):
-
+Working directory is NOT on `ctx`. Read it from the instance context:
 ```ts
 import { InstanceState } from "@/effect/instance-state"
 const instanceCtx = yield* InstanceState.context
-const cwd = instanceCtx.directory     // and instanceCtx.worktree
+const cwd = instanceCtx.directory // and instanceCtx.worktree
 ```
 
-### Live progress / streaming output
+### Streaming live output
 
-Call `ctx.metadata` repeatedly to stream. The shell tool streams command output this way, and the TUI
-renders it live:
-
+Call `ctx.metadata` repeatedly (the shell tool does this and the TUI renders it live):
 ```ts
 yield* ctx.metadata({ metadata: { output: "" } })
-// ... as chunks arrive:
+// ...as more arrives:
 yield* ctx.metadata({ metadata: { output: accumulatedSoFar } })
 ```
 
-### Permissions
+### Permissions (for anything with side effects)
 
-Gate anything with side effects behind `ctx.ask`. It throws/blocks until the user allows:
-
+Gate writes/commands/network behind `ctx.ask` before doing them:
 ```ts
 yield* ctx.ask({
-  permission: "mytool",        // the permission key (also used in agent permission rulesets)
-  patterns: ["*"],             // what is being acted on (e.g. a path); used for allow-once/always rules
-  always: ["*"],               // patterns eligible for "always allow"
+  permission: "mytool", // the permission key
+  patterns: [params.path], // what is being acted on (used for allow-once / always)
+  always: ["*"],
   metadata: {},
 })
 ```
 
----
+### Optional: gate a tool behind a flag
 
-## 4. Register the tool (`tool/registry.ts`)
-
-Three edits in `packages/opencode/src/tool/registry.ts`:
-
+In the `builtin` array you can make a tool conditional:
 ```ts
-// a) import
-import { WordCountTool } from "./wordcount"
-
-// b) bind it (near the other `const x = yield* XTool`)
-const wordcount = yield* WordCountTool
-
-// c) add to the tool map...
-wordcount: Tool.init(wordcount),
-
-// ...and to the `builtin: [...]` array so it's on by default
-tool.wordcount,
+...(flags.experimentalX ? [tool.x] : []),
 ```
 
-If your tool yields a service that isn't already a dep, add its node to the layer at the bottom of the
-file:
+### Optional: custom TUI rendering
 
-```ts
-export const node = LayerNode.make({ service: Service, layer, deps: [ /* ..., */ BackgroundJob.node ] })
-```
+By default a tool call renders generically. For a custom look, add a component to `PART_MAPPING` in
+`packages/tui/src/routes/session/index.tsx` keyed by your tool id, and read your `metadata` there. Only
+do this if the default is not enough.
 
-Optional gating: a tool can be conditional on a flag (`...(flags.experimentalX ? [tool.x] : [])`) or a
-provider (see how `webSearchEnabled` filters `tool.search` in `tools()`).
-
----
-
-## 5. Test it
-
-Tools are testable in isolation - compile a small layer with just the services the tool needs, init it,
-and call `execute`. Pattern (see `test/tool/background-shell.test.ts`):
+### Optional: a test
 
 ```ts
 const layer = Layer.mergeAll(
-  LayerNode.compile(LayerNode.group([Config.node, Truncate.node, Agent.node, /* ...your deps */])),
+  LayerNode.compile(LayerNode.group([Config.node /* ...your deps */])),
   testInstanceStoreLayer,
 )
-const it = testEffect(layer)               // use it.live(...) for real timers / subprocesses
+const it = testEffect(layer) // it.live(...) for real timers/subprocesses
 
 it.live("counts words", () =>
   Effect.gen(function* () {
@@ -206,39 +228,25 @@ it.live("counts words", () =>
     expect(res.output).toContain("words")
   }))
 ```
-
-Run from the package dir (never the repo root): `cd packages/opencode && bun test test/tool/mytool.test.ts`.
-Typecheck: `bun run typecheck` in `packages/opencode`.
+Run from the package dir, never the repo root: `cd packages/opencode && bun test test/tool/wordcount.test.ts`.
 
 ---
 
-## 6. (Optional) custom rendering in the TUI
+## Rules the local model MUST follow (common failures)
 
-By default a tool call renders generically. For a bespoke look (like the write diff or shell output),
-add a component to `PART_MAPPING` in `packages/tui/src/routes/session/index.tsx` keyed by your tool id,
-and read your `metadata` there. Only do this if the default rendering is not enough.
+- **Register in all 4 places** (3a-3d). The #1 reason a new tool "does nothing" is a missing registry edit.
+- **`output` is for the model, not the human.** Return the result/data. Summarise big output.
+- **The description does the steering.** Always include "WHEN NOT TO USE" - the model over-calls without it.
+- **No `try/catch`.** Use `Effect.tryPromise` for promises and `Effect.catch` for recovery.
+- **Bind services first** as named vars. Never `yield* (yield* Foo.Service).bar()`.
+- **id = short, lowercase, no spaces** (`wordcount`, `bash_kill`). It is the name the model types.
 
----
+## Final checklist
 
-## Conventions & gotchas
-
-- **`output` is for the model, not the human.** Return the result/data; summarise big outputs.
-- **Descriptions carry the weight.** Spell out when to use and when NOT to - the local model over/under-calls
-  without it. (See the gateway `chat_tool_gate` for how tool intent is nudged server-side too.)
-- **Honour `ctx.abort`** for long work, and stream via `ctx.metadata` so Esc and the live UI work.
-- **Fail safe.** A tool that can partially fail should degrade, not crash the turn. Use Effect error
-  handling (`Effect.catch`), not `try/catch`.
-- **Effect v4:** `Effect.catch`, `Schema.Literals([...])`, `Effect.tryPromise`. Bind services to named
-  vars first; avoid nested `yield* (yield* Foo.Service).bar()`.
-- **Naming:** the tool `id` is the name the model sees - short, lowercase, verb-ish (`read`, `bash_kill`,
-  `wordcount`).
-
-## Checklist
-
-- [ ] `tool/<name>.ts` with `Tool.define(id, ...)` returning `{ description, parameters, execute }`
-- [ ] non-trivial `description` lives in a companion `tool/<name>.txt` (imported), with a when/when-NOT section
-- [ ] `parameters` = `Schema.Struct` with a `description` on every field
-- [ ] `execute` returns `{ title, metadata, output }`; `output` is the model-facing result
-- [ ] registered in `registry.ts` (import, bind, map entry, `builtin` array) + any new dep node added
-- [ ] `bun run typecheck` clean in `packages/opencode`
-- [ ] a `test/tool/<name>.test.ts` covering the happy path (+ a failure/edge if it has side effects)
+- [ ] `tool/<name>.txt` written, with a WHEN NOT TO USE line
+- [ ] `tool/<name>.ts` created from the template, `execute` returns `{ title, metadata, output }`
+- [ ] registry.ts edit 3a (import) done
+- [ ] registry.ts edit 3b (bind) done
+- [ ] registry.ts edit 3c (map entry) done
+- [ ] registry.ts edit 3d (builtin array) done
+- [ ] `cd packages/opencode && bun run typecheck` is clean
