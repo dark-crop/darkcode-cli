@@ -857,6 +857,30 @@ export function Prompt(props: PromptProps) {
     }
   })
 
+  // When the input is empty and the agent panel is showing (a fan-out is active, or you're
+  // viewing a subagent), up/down loop the selection through main + every subagent and navigate
+  // into it - the same rows the AgentPanel draws. Returns true if it handled the key. Gated on
+  // panel-visibility so it never hijacks empty-input history navigation once agents are idle.
+  function cycleAgent(direction: 1 | -1) {
+    if (input.plainText !== "") return false
+    const sid = props.sessionID
+    if (!sid) return false
+    const self = sync.session.get(sid)
+    const mainID = self?.parentID ?? self?.id
+    if (!mainID) return false
+    const rows = sync.data.session
+      .filter((x) => x.id === mainID || x.parentID === mainID)
+      .toSorted((a, b) => a.time.created - b.time.created)
+    if (rows.length < 2) return false
+    const anyBusy = rows.some((x) => sync.data.session_status[x.id]?.type === "busy")
+    if (!anyBusy && !self?.parentID) return false
+    const idx = rows.findIndex((x) => x.id === sid)
+    const target = rows[(idx + direction + rows.length) % rows.length]
+    if (!target) return false
+    route.navigate({ type: "session", sessionID: target.id })
+    return true
+  }
+
   useBindings(() => {
     return {
       target: inputTarget,
@@ -870,6 +894,7 @@ export function Prompt(props: PromptProps) {
           title: "Previous prompt history",
           category: "Prompt",
           run() {
+            if (cycleAgent(-1)) return
             if (input.cursorOffset !== 0) {
               if (input.scrollY + input.visualCursor.visualRow === 0) input.cursorOffset = 0
               return false
@@ -902,6 +927,7 @@ export function Prompt(props: PromptProps) {
           title: "Next prompt history",
           category: "Prompt",
           run() {
+            if (cycleAgent(1)) return
             if (input.cursorOffset !== input.plainText.length) {
               if (
                 input.scrollY + input.visualCursor.visualRow ===
