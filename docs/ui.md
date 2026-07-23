@@ -151,29 +151,32 @@ and resets its timer when the session goes idle. There is no separate footer
 spinner, no per-message "generating" header, and no live "Thinking" line - this
 row is the one place the app tells you it is working.
 
-## Reasoning: "Thought: Xs" summaries
+## Reasoning: live above the answer, then a run-time line
 
 Source: `ReasoningPart` and `ReasoningHeader` in
 `packages/tui/src/routes/session/index.tsx`.
 
-Reasoning is intentionally quiet:
+Reasoning is shown as it happens, above the response:
 
-- **Answer first.** The assistant message renders its non-reasoning parts, then
-  its reasoning parts below them (`orderedParts` puts reasoning last), so any
-  "thinking" appears **under** the response, not above it.
-- **No live thinking line.** While reasoning is still streaming, `ReasoningHeader`
-  renders nothing - the single `WorkingIndicator` above is the only live signal.
-- **A grey summary when done.** Once the reasoning block finalizes (the server
-  sets `time.end`), the header collapses to a muted grey line:
+- **Thinking first, answer below.** The assistant message renders its reasoning
+  parts *first*, then its non-reasoning parts (`orderedParts` puts reasoning at
+  the front: `[...reasoning, ...rest]`), so thinking appears **above** the
+  response, streaming live as the model works.
+- **Click to expand.** Reasoning renders a few lines by default; clicking the
+  block expands it to at most **12 lines** of the full reasoning markdown, then
+  collapses again. The summary/toggle never shifts the surrounding layout.
+- **A run-time line when done.** Once the turn finalizes (the block has a
+  duration), the reasoning is replaced by a single muted line in
+  `theme.textMuted`:
 
   ```
-  Thought: <short summary> · 4s
+  * <sassy sign-off> (12s)
   ```
 
-  It shows a one-line summary of the reasoning plus its duration, in
-  `theme.textMuted`. In minimal ("hide") thinking mode the line is collapsible -
-  a `+ ` / `- ` toggle expands or hides the full reasoning markdown; the summary
-  line itself never shifts the layout.
+  The sign-off is picked stably per message from `DONE_VERBS` in
+  `packages/tui/src/util/working-verb.tsx` (a hash of the message id, so it never
+  flickers on re-render), and the time in parentheses is the turn's total
+  duration. This replaced the old grey `Thought: Xs` summary.
 
 ## Exit epilogue
 
@@ -206,5 +209,5 @@ accent, the mascot, the `›` indicator, and the working verb all follow
 | Input rail, `›` indicator, footer, hints | `packages/tui/src/component/prompt/index.tsx` |
 | Working indicator (spinner + verb + elapsed·tokens) | `WorkingIndicator` in `packages/tui/src/routes/session/index.tsx` |
 | Rotating sassy verbs | `packages/tui/src/util/working-verb.tsx` |
-| Reasoning "Thought: Xs" summary | `ReasoningPart` / `ReasoningHeader` in `packages/tui/src/routes/session/index.tsx` |
+| Reasoning (live, above answer) + run-time line | `ReasoningPart` / `ReasoningHeader` in `packages/tui/src/routes/session/index.tsx`; `doneVerb` in `packages/tui/src/util/working-verb.tsx` |
 | Exit epilogue | `packages/tui/src/util/presentation.ts` |
