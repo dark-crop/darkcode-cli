@@ -79,6 +79,7 @@ import { getScrollAcceleration } from "../../util/scroll"
 import { collapseToolOutput } from "../../util/collapse-tool-output"
 import { usePluginRuntime } from "../../plugin/runtime"
 import { DialogRetryAction } from "../../component/dialog-retry-action"
+import { DialogAgents } from "../../component/dialog-agents"
 import { getRevertDiffFiles } from "../../util/revert-diff"
 import { OPENCODE_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -211,6 +212,18 @@ export function Session() {
     return sync.data.session
       .filter((x) => x.parentID === parentID || x.id === parentID)
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  })
+  // Options for the agent switcher (DialogAgents): the main session first, then each subagent.
+  const agentSwitchOptions = createMemo(() => {
+    const mainID = session()?.parentID ?? session()?.id
+    return children().map((s) => {
+      if (s.id === mainID) return { id: s.id, title: "main", description: undefined }
+      const match = s.title.match(/@(\w+) subagent/)
+      const agent = match ? match[1] : "subagent"
+      const task = s.title.replace(/\s*\(@\w+ subagent\)\s*$/, "").trim()
+      const running = sync.data.session_status[s.id]?.type === "busy"
+      return { id: s.id, title: task || agent, description: running ? `@${agent} · running` : `@${agent}` }
+    })
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const foregroundTasks = createMemo(() =>
@@ -427,12 +440,6 @@ export function Session() {
     })
     const status = sync.data.session_status[sessionID]
     if (status?.type === "retry") void DialogAlert.show(dialog, "Retry Error", status.message)
-  }
-
-  function moveFirstChild() {
-    if (children().length === 1) return
-    const next = children().find((x) => !!x.parentID)
-    if (next) enterChild(next.id)
   }
 
   function moveChild(direction: number) {
@@ -1028,13 +1035,18 @@ export function Session() {
       },
     },
     {
-      title: "Go to child session",
+      title: "View subagents",
       value: "session.child.first",
       category: "Session",
       hidden: true,
       run: () => {
-        dialog.clear()
-        moveFirstChild()
+        dialog.replace(() => (
+          <DialogAgents
+            options={agentSwitchOptions}
+            current={session()?.id ?? ""}
+            onSelect={(id) => enterChild(id)}
+          />
+        ))
       },
     },
     {
