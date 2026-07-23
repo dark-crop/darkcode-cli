@@ -2,7 +2,6 @@ import { createMemo, createSignal, createEffect, onCleanup, For, Show } from "so
 import { useRoute, useRouteData } from "../../context/route"
 import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
-import { SplitBorder } from "../../ui/border"
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import { Locale } from "../../util/locale"
 
@@ -59,17 +58,7 @@ export function AgentPanel() {
 
   return (
     <Show when={visible()}>
-      <box
-        flexShrink={0}
-        paddingTop={1}
-        paddingBottom={1}
-        paddingLeft={2}
-        paddingRight={1}
-        {...SplitBorder}
-        border={["top"]}
-        borderColor={theme.border}
-        backgroundColor={theme.backgroundPanel}
-      >
+      <box flexShrink={0} paddingTop={1} paddingLeft={2} paddingRight={2}>
         <For each={rows()}>
           {(s) => {
             const active = createMemo(() => s.id === route.sessionID)
