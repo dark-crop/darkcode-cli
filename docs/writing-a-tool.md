@@ -54,6 +54,28 @@ That is a complete, working tool. Two things to internalize:
 - **`description` + parameter `annotate({description})` are the only guidance the model gets.** Say what
   the tool does, *when to use it*, and *when NOT to* (the local model needs the negative case spelled out).
 
+### Put the description in a companion `<name>.txt` (the house convention)
+
+A one-liner can stay inline as above, but anything longer belongs in a sibling text file - this is how
+almost every real tool does it (`read.txt`, `write.txt`, `task.txt`, `image.txt`, `memory.txt`, ...).
+It keeps the prose (which you will iterate on a lot, for the local model) out of the code:
+
+```ts
+import DESCRIPTION from "./wordcount.txt"   // Bun imports .txt as a string
+
+export const WordCountTool = Tool.define(
+  "wordcount",
+  Effect.succeed({
+    description: DESCRIPTION,                // <- the whole file
+    parameters: Parameters,
+    execute: (params, ctx) => Effect.gen(function* () { /* ... */ }),
+  } satisfies Tool.DefWithoutID<typeof Parameters, Metadata>),
+)
+```
+
+Write the `.txt` as instructions to the model: what the tool is for, the trigger cases, and an explicit
+"do NOT use this when ..." section. Read `image.txt` for a good example of the when/when-not framing.
+
 ---
 
 ## 2. When the tool needs services (config, db, spawner, ...)
@@ -214,6 +236,7 @@ and read your `metadata` there. Only do this if the default rendering is not eno
 ## Checklist
 
 - [ ] `tool/<name>.ts` with `Tool.define(id, ...)` returning `{ description, parameters, execute }`
+- [ ] non-trivial `description` lives in a companion `tool/<name>.txt` (imported), with a when/when-NOT section
 - [ ] `parameters` = `Schema.Struct` with a `description` on every field
 - [ ] `execute` returns `{ title, metadata, output }`; `output` is the model-facing result
 - [ ] registered in `registry.ts` (import, bind, map entry, `builtin` array) + any new dep node added
