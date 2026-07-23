@@ -858,10 +858,11 @@ export function Prompt(props: PromptProps) {
   })
 
   // When the input is empty and the agent panel is showing (a fan-out is active, or you're
-  // viewing a subagent), up/down loop the selection through main + every subagent and navigate
-  // into it - the same rows the AgentPanel draws. Returns true if it handled the key. Gated on
-  // panel-visibility so it never hijacks empty-input history navigation once agents are idle.
-  function cycleAgent(direction: 1 | -1) {
+  // viewing a subagent), the DOWN key walks the selection forward through main + every subagent
+  // and navigates into it, wrapping around - the same rows the AgentPanel draws. Returns true if
+  // it handled the key. UP is intentionally left to prompt history. Gated on panel-visibility so
+  // it never hijacks empty-input history navigation once agents are idle.
+  function cycleAgent() {
     if (input.plainText !== "") return false
     const sid = props.sessionID
     if (!sid) return false
@@ -875,7 +876,7 @@ export function Prompt(props: PromptProps) {
     const anyBusy = rows.some((x) => sync.data.session_status[x.id]?.type === "busy")
     if (!anyBusy && !self?.parentID) return false
     const idx = rows.findIndex((x) => x.id === sid)
-    const target = rows[(idx + direction + rows.length) % rows.length]
+    const target = rows[(idx + 1) % rows.length]
     if (!target) return false
     route.navigate({ type: "session", sessionID: target.id })
     return true
@@ -894,7 +895,6 @@ export function Prompt(props: PromptProps) {
           title: "Previous prompt history",
           category: "Prompt",
           run() {
-            if (cycleAgent(-1)) return
             if (input.cursorOffset !== 0) {
               if (input.scrollY + input.visualCursor.visualRow === 0) input.cursorOffset = 0
               return false
@@ -927,7 +927,7 @@ export function Prompt(props: PromptProps) {
           title: "Next prompt history",
           category: "Prompt",
           run() {
-            if (cycleAgent(1)) return
+            if (cycleAgent()) return
             if (input.cursorOffset !== input.plainText.length) {
               if (
                 input.scrollY + input.visualCursor.visualRow ===
