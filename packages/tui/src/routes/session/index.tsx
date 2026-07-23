@@ -55,7 +55,7 @@ import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
-import { SubagentFooter } from "./subagent-footer.tsx"
+import { AgentPanel } from "./agent-panel.tsx"
 import { filetype } from "../../util/filetype"
 import parsers from "../../parsers-config"
 import { errorMessage } from "../../util/error"
@@ -247,7 +247,9 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
-  const visible = createMemo(() => !session()?.parentID && permissions().length === 0 && questions().length === 0)
+  // The prompt shows for subagent (child) sessions too, so you can navigate into an agent and
+  // chat into it directly - same screen design as the main session.
+  const visible = createMemo(() => permissions().length === 0 && questions().length === 0)
   const disabled = createMemo(() => permissions().length > 0 || questions().length > 0)
 
   const pending = createMemo(() => {
@@ -1298,9 +1300,6 @@ export function Session() {
                     directory={sync.session.get(questions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={session()?.parentID}>
-                  <SubagentFooter />
-                </Show>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
                     name="session_prompt"
@@ -1323,6 +1322,7 @@ export function Session() {
                     />
                   </pluginRuntime.Slot>
                 </Show>
+                <AgentPanel />
               </box>
             </Show>
             <Toast />
@@ -1523,7 +1523,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.time.completed - user.time.created
   })
 
-  const childShortcut = useCommandShortcut("session.child.first")
   const backgroundShortcut = useCommandShortcut("session.background")
 
   // Reasoning ("Thought: …") sits ABOVE the answer - directly under the user's prompt, the way the
@@ -1551,27 +1550,22 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           )
         }}
       </For>
-      <Show when={props.parts.some((x) => x.type === "tool" && x.tool === "task")}>
+      <Show
+        when={
+          sync.data.capabilities.experimentalBackgroundSubagents &&
+          props.parts.some(
+            (x) =>
+              x.type === "tool" &&
+              x.tool === "task" &&
+              x.state.status === "running" &&
+              x.state.metadata?.background !== true,
+          )
+        }
+      >
         <box paddingTop={1} paddingLeft={3}>
           <text fg={theme.text}>
-            {childShortcut()}
-            <span style={{ fg: theme.textMuted }}> view subagents</span>
-            <Show
-              when={
-                sync.data.capabilities.experimentalBackgroundSubagents &&
-                props.parts.some(
-                  (x) =>
-                    x.type === "tool" &&
-                    x.tool === "task" &&
-                    x.state.status === "running" &&
-                    x.state.metadata?.background !== true,
-                )
-              }
-            >
-              <span style={{ fg: theme.textMuted }}> · </span>
-              {backgroundShortcut()}
-              <span style={{ fg: theme.textMuted }}> background</span>
-            </Show>
+            {backgroundShortcut()}
+            <span style={{ fg: theme.textMuted }}> run in background</span>
           </text>
         </box>
       </Show>
