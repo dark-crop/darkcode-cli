@@ -9,6 +9,11 @@ When NOT to use the Task tool:
 - If no available agent is a good fit for the task, use other tools directly
 
 
+Fanning out (spawning an agent suite):
+- When the user asks you to "fan out" or run agents in parallel, do NOT do the work yourself and do NOT spawn a single agent. Split the work into several independent subagents and launch them ALL in one message so they run concurrently.
+- If the user says how many agents to spawn, or what each one should do, follow that exactly. Otherwise divide the task into a sensible number of non-overlapping parts and spawn one agent per part.
+- Give each agent a clear, self-contained slice of the work. Let each agent decide how to accomplish its slice; do not prescribe its method.
+
 Usage notes:
 1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses
 2. Once you have delegated work to an agent, do not duplicate that work yourself. Continue with non-overlapping tasks, or wait for the result. For background tasks, you will be notified automatically when the result is ready.
