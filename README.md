@@ -302,6 +302,7 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 | [context.md](docs/context.md) | The `/context` usage bar. |
 | [ui.md](docs/ui.md) | The Claude Code-style interface and the power-purple theme. |
 | [architecture.md](docs/architecture.md) | The provider lock, isolated config, `packages/` layout. |
+| [writing-a-tool.md](docs/writing-a-tool.md) | Add a new agent tool: define -> register -> test, with the real `Tool.define` shape + conventions. |
 
 ## Relationship to opencode
 

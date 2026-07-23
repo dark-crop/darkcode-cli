@@ -32,8 +32,8 @@ The tier (`<tier>`) sets the reasoning budget. Every tier gets the full native *
 | `high` | on | 262K | large | Large reasoning budget (default) |
 | `ultra` | on | 262K | max | Maximum reasoning budget |
 
-For the chat lanes, the `high` and `ultra` tiers are flagged as reasoning models, so their
-"Thought: Xs" summaries show after a response. `low` runs with thinking off entirely.
+For the chat lanes, the `high` and `ultra` tiers are flagged as reasoning models, so their thinking
+streams live above the answer (see [ui.md](ui.md)). `low` runs with thinking off entirely.
 
 ## Composing a model id
 

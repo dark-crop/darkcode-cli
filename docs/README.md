@@ -8,10 +8,12 @@ darkcode is an MIT-licensed fork of [opencode](https://github.com/sst/opencode),
 | --- | --- |
 | [install.md](install.md) | Build from source: `git clone`, `bun install`, the `./darkcode` launcher (with the required `@opentui/solid` preload), and putting it on your `PATH`. |
 | [models.md](models.md) | The `dark-llm` lanes and tiers, the `/model` and `/effort` commands, and how the model list is pulled live from the gateway. |
-| [auth.md](auth.md) | Signing in with `/login` (browser flow to the gateway `/token` page) and out with `/logout`, plus where the credential is stored. |
+| [images.md](images.md) | The agent-called `image` tool: generate, edit, pose, inpaint (no `/image` command - the agent calls it), and vision-vs-tool routing. |
+| [auth.md](auth.md) | Signing in with `/login` (browser flow to the gateway `/app/sign-in` page) and out with `/logout`, plus where the credential is stored. |
 | [context.md](context.md) | The `/context` command: context-window usage, the segmented per-category bar, token breakdown, and cost. |
-| [ui.md](ui.md) | The Claude Code-style interface: scrolling mascot header, clean input rail, the single live working indicator, reasoning summaries, and the exit epilogue. |
+| [ui.md](ui.md) | The Claude Code-style interface: scrolling mascot header, clean input rail, the single live working indicator, live reasoning + run-time line, and the exit epilogue. |
 | [architecture.md](architecture.md) | How darkcode is structured: the provider lock, isolated config, the `packages/` layout, and how it differs from upstream opencode. |
+| [writing-a-tool.md](writing-a-tool.md) | Contributor guide: add a new agent tool (define -> register -> test), with the real `Tool.define` shape + conventions. |
 
 ## Quickstart
 

@@ -3,8 +3,9 @@
 darkcode ships a stripped-down, Claude Code-style terminal interface: a compact
 mascot header that scrolls with the conversation, a clean divider-framed input,
 a footer with the current model and key hints, and a single live "working"
-indicator while the model generates. Reasoning is folded away into a quiet
-"Thought: Xs" summary shown below the answer. Everything is painted from one
+indicator while the model generates. Reasoning streams live *above* the answer
+as the model thinks (click to expand), and each finished turn closes with a
+muted `* <sassy sign-off> (<total time>)` run-time line. Everything is painted from one
 accent color - a vivid "power purple" - defined in a single place and working
 in both dark and light terminals.
 
