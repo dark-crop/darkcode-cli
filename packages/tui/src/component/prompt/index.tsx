@@ -1457,12 +1457,6 @@ export function Prompt(props: PromptProps) {
                   {local.model.parsed().model}
                 </text>
                 <text fg={theme.textMuted}>{currentProviderLabel()}</text>
-                <Show when={showVariant()}>
-                  <text fg={theme.textMuted}>·</text>
-                  <text>
-                    <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
-                  </text>
-                </Show>
               </box>
             )}
           </Show>
@@ -1596,7 +1590,14 @@ export function Prompt(props: PromptProps) {
               {props.hint ?? (
                 <Show when={props.sessionID}>
                   <box marginLeft={1}>
-                    <text fg={theme.textMuted}>{location()?.directory ?? paths.cwd}</text>
+                    <text fg={theme.textMuted}>
+                      {(() => {
+                        // Show a shortened cwd: ".../<last two segments>" (e.g. .../projects/test).
+                        const dir = location()?.directory ?? paths.cwd
+                        const parts = dir.split("/").filter(Boolean)
+                        return parts.length > 2 ? ".../" + parts.slice(-2).join("/") : dir
+                      })()}
+                    </text>
                   </box>
                 </Show>
               )}
@@ -1615,7 +1616,7 @@ export function Prompt(props: PromptProps) {
                     <Match when={usage()}>
                       {(item) => (
                         <text fg={theme.textMuted} wrapMode="none">
-                          {[item().context, item().cost].filter(Boolean).join(" · ")}
+                          {item().context}
                         </text>
                       )}
                     </Match>
@@ -1625,9 +1626,6 @@ export function Prompt(props: PromptProps) {
                       </text>
                     </Match>
                   </Switch>
-                  <text fg={theme.text}>
-                    {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
-                  </text>
                 </Match>
                 <Match when={store.mode === "shell"}>
                   <text fg={theme.text}>
