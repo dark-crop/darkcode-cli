@@ -29,10 +29,10 @@ type Tier = "low" | "med" | "high" | "ultra"
 // reasoning eats the budget. This is a CAP, not a target - the model still stops when done -
 // so generous values only prevent truncation, they don't lengthen replies.
 const TIERS: { key: Tier; context: number; output: number }[] = [
-  { key: "low", context: 262_144, output: 16_384 },
-  { key: "med", context: 262_144, output: 24_576 },
-  { key: "high", context: 262_144, output: 32_000 },
-  { key: "ultra", context: 262_144, output: 32_000 },
+  { key: "low", context: 1_048_576, output: 16_384 },
+  { key: "med", context: 1_048_576, output: 24_576 },
+  { key: "high", context: 1_048_576, output: 32_000 },
+  { key: "ultra", context: 1_048_576, output: 32_000 },
 ]
 
 function textModel(name: string, family: string, tier: (typeof TIERS)[number], reasoning: boolean): BuiltinModel {

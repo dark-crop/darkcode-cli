@@ -45,9 +45,11 @@ export function darkLlmLanes(models: Record<string, { name?: string; family?: st
     const label = (info.name ?? id).replace(/\s*·\s*(low|med|high|ultra)\s*$/i, "").trim() || family
     // Description = curated flavor copy for the president lane; generic context for others.
     const ctx = info.limit?.context
+    const fmtCtx = (n?: number) =>
+      !n ? "1M" : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${Math.round(n / 1000)}K`
     const description =
       family === "president"
-        ? "256K context · Best for complex tasks · Unlocked for president level"
+        ? `${fmtCtx(ctx)} context · Best for complex tasks · Unlocked for president level`
         : ctx
           ? `${Math.round(ctx / 1000)}K context`
           : ""
