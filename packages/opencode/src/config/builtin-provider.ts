@@ -9,7 +9,7 @@ import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
  */
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "president-high"
+export const DARK_LLM_DEFAULT_MODEL_ID = "mr-president-2-0-high"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 
 type BuiltinModel = NonNullable<ConfigV1.Info["provider"]>[string]["models"] extends infer M
@@ -67,7 +67,7 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
   return {
     // One native-vLLM chat lane owns all KV at full 262K. The "President" label here is only an
     // OFFLINE fallback; online the brand name comes from the gateway (/model/info display_name).
-    ...tieredModels("president", "President", { reasoningTiers: ["high", "ultra"] }),
+    ...tieredModels("mr-president-2-0", "Mr.President", { reasoningTiers: ["high", "ultra"] }),
     "z-image": {
       name: "Z Image",
       family: "z-image",

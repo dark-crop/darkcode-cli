@@ -1647,7 +1647,7 @@ const layer = Layer.effect(
                 // client: the brand name lives only on the gateway (litellm model_info.display_name)
                 // and clients render whatever it returns. Best-effort - falls back to a generic
                 // id-derived label (darkLlmDisplayName) if /model/info is unreachable.
-                const meta = new Map<string, { name?: string; effort?: string; context?: number }>()
+                const meta = new Map<string, { name?: string; effort?: string; context?: number; description?: string }>()
                 try {
                   const root = base.replace(/\/v1$/, "")
                   const ctrl2 = new AbortController()
@@ -1661,7 +1661,12 @@ const layer = Layer.effect(
                     const info = (await infoRes.json()) as {
                       data?: Array<{
                         model_name?: string
-                        model_info?: { display_name?: string; effort?: string; context_length?: number }
+                        model_info?: {
+                          display_name?: string
+                          effort?: string
+                          context_length?: number
+                          description?: string
+                        }
                       }>
                     }
                     for (const m of info.data ?? []) {
@@ -1670,6 +1675,7 @@ const layer = Layer.effect(
                         name: m.model_info?.display_name,
                         effort: m.model_info?.effort,
                         context: m.model_info?.context_length,
+                        description: m.model_info?.description,
                       })
                     }
                   }
@@ -1701,6 +1707,9 @@ const layer = Layer.effect(
                       : mm.name
                     : darkLlmDisplayName(id)
                   if (mm?.context && models[id].limit) models[id].limit.context = mm.context
+                  // Gateway-owned lane description (litellm model_info.description). The picker
+                  // renders this verbatim, so re-copy flows through with zero client changes.
+                  if (mm?.description) (models[id] as any).description = mm.description
                 }
               } catch {}
             })

@@ -34,7 +34,9 @@ export function composeDarkLlmModel(family: Lane, tier: Tier) {
  *  We split a trailing version off the name so the picker can show it separately, e.g.
  *  name "Mr. President 1.1" + context 262144  ->  title "Mr. President", desc "1.1 · 262K".
  *  Renaming/re-versioning on the gateway flows through with zero client changes. */
-export function darkLlmLanes(models: Record<string, { name?: string; family?: string; limit?: { context?: number } }>) {
+export function darkLlmLanes(
+  models: Record<string, { name?: string; family?: string; description?: string; limit?: { context?: number } }>,
+) {
   const byFamily = new Map<string, { label: string; description: string }>()
   for (const [id, info] of Object.entries(models)) {
     const m = id.match(/^(.+)-(low|med|high|ultra)$/)
@@ -43,16 +45,12 @@ export function darkLlmLanes(models: Record<string, { name?: string; family?: st
     if (byFamily.has(family)) continue
     // Title = the full gateway display name (incl. version), tier suffix stripped.
     const label = (info.name ?? id).replace(/\s*·\s*(low|med|high|ultra)\s*$/i, "").trim() || family
-    // Description = curated flavor copy for the president lane; generic context for others.
+    // Description is gateway-owned (litellm model_info.description) so re-copy needs no client
+    // change; fall back to a clean context string only when the gateway sent none.
     const ctx = info.limit?.context
     const fmtCtx = (n?: number) =>
       !n ? "1M" : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${Math.round(n / 1000)}K`
-    const description =
-      family === "president"
-        ? `${fmtCtx(ctx)} context · Best for complex tasks · Unlocked for president level`
-        : ctx
-          ? `${Math.round(ctx / 1000)}K context`
-          : ""
+    const description = info.description?.trim() ? info.description.trim() : ctx ? `${fmtCtx(ctx)} context` : ""
     byFamily.set(family, { label, description })
   }
   return [...byFamily].map(([family, v]) => ({ family, label: v.label, description: v.description }))
