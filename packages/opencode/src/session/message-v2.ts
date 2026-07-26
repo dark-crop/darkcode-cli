@@ -135,6 +135,17 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 ) {
   const result: UIMessage[] = []
   const toolNames = new Set<string>()
+  // A media part is only sent if the model can actually take that input modality. Text-only lanes
+  // (e.g. the dark-llm chat models - vLLM without a vision projector) would otherwise get an image
+  // they can't process: the gateway 400s ("not a multimodal model") or the model gets confused and
+  // regurgitates its tool schema. Strip to a text placeholder instead so the turn degrades cleanly.
+  const modelAcceptsMedia = (mime: string) => {
+    if (mime.startsWith("image/")) return model.capabilities?.input?.image !== false
+    if (mime === "application/pdf") return model.capabilities?.input?.pdf !== false
+    if (mime.startsWith("audio/")) return model.capabilities?.input?.audio !== false
+    if (mime.startsWith("video/")) return model.capabilities?.input?.video !== false
+    return true
+  }
   // Track media from tool results that need to be injected as user messages
   // for providers that don't support that media type in tool results.
   //
@@ -210,10 +221,11 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
           })
         // text/plain and directory files are converted into text parts, ignore them
         if (part.type === "file" && part.mime !== "text/plain" && part.mime !== "application/x-directory") {
-          if (options?.stripMedia && isMedia(part.mime)) {
+          if (isMedia(part.mime) && (options?.stripMedia || !modelAcceptsMedia(part.mime))) {
+            const hint = options?.stripMedia ? "" : " - this model can't view it; switch to a vision model to analyze images"
             userMessage.parts.push({
               type: "text",
-              text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+              text: `[Attached ${part.mime}: ${part.filename ?? "file"}${hint}]`,
             })
           } else {
             userMessage.parts.push({
