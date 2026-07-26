@@ -1652,7 +1652,14 @@ const layer = Layer.effect(
                 // id-derived label (darkLlmDisplayName) if /model/info is unreachable.
                 const meta = new Map<
                   string,
-                  { name?: string; effort?: string; context?: number; description?: string; vision?: boolean }
+                  {
+                    name?: string
+                    effort?: string
+                    context?: number
+                    description?: string
+                    vision?: boolean
+                    hidden?: boolean
+                  }
                 >()
                 try {
                   const root = base.replace(/\/v1$/, "")
@@ -1673,6 +1680,7 @@ const layer = Layer.effect(
                           context_length?: number
                           description?: string
                           supports_vision?: boolean
+                          hidden?: boolean
                         }
                       }>
                     }
@@ -1684,18 +1692,22 @@ const layer = Layer.effect(
                         context: m.model_info?.context_length,
                         description: m.model_info?.description,
                         vision: m.model_info?.supports_vision === true,
+                        hidden: m.model_info?.hidden === true,
                       })
                     }
                   }
                 } catch {}
 
-                const returned = new Set(ids)
+                // Drop gateway models flagged hidden in /model/info (e.g. the Qwen3-VL backend that
+                // powers the president lane's delegated vision - it must not show as its own lane).
+                const visibleIds = ids.filter((id) => !meta.get(id)?.hidden)
+                const returned = new Set(visibleIds)
                 const models = providers[darkllm].models
                 // Clone an existing entry to get the exact runtime model shape (api, variants,
                 // etc.) for any gateway-reported id we don't statically define.
                 const template = Object.values(models)[0] as any
                 for (const id of Object.keys(models)) if (!returned.has(id)) delete models[id]
-                for (const id of ids) {
+                for (const id of visibleIds) {
                   if (!models[id]) {
                     const entry: any = template
                       ? { ...template, limit: { ...template.limit }, api: { ...(template.api ?? {}), id } }
