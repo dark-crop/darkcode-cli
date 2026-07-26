@@ -10,7 +10,9 @@ When NOT to use the Task tool:
 
 
 Fanning out (spawning an agent suite):
+- CALL the task tool. Do NOT write out or describe the tool, its schema, or its agent types as your answer, and do NOT say the work is "done" without actually calling it. Fanning out means emitting real task tool calls - one per agent - all in the SAME message so they run concurrently.
 - When the user asks you to "fan out" or run agents in parallel, do NOT do the work yourself and do NOT spawn a single agent. Split the work into several independent subagents and launch them ALL in one message so they run concurrently.
+- Each agent starts fresh with NO access to your local state, so make its prompt self-contained: if the work is about a repo/URL, put that URL (and "clone it if needed") in the agent's prompt so it can fetch what it needs itself.
 - If the user says how many agents to spawn, or what each one should do, follow that exactly. Otherwise divide the task into a sensible number of non-overlapping parts and spawn one agent per part.
 - Give each agent a clear, self-contained slice of the work. Let each agent decide how to accomplish its slice; do not prescribe its method.
 - Model: leave the `model` parameter UNSET. Fan-out subagents automatically run on the LOWEST-level lane available (e.g. Mr.Agent Lv.35, below Mr.President Lv.284) while keeping the current effort tier, so parallel helper work never burns the top reasoning lane. Only set `model` to a specific lane when the user explicitly asked for one for the sub-work (any lane, lower or higher); an unknown value is ignored.
