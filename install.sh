@@ -26,11 +26,24 @@ bad()   { printf "  ${RED}fail${R} %s\n" "$*"; }
 die()   { printf "${RED}darkcode install: %s${R}\n" "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
+# The real darkcode mascot (the purple blob from the CLI), rendered as truecolor half-blocks.
+# Generated from packages/tui/src/component/mascot-sprite.ts (MASCOT_MINI). Falls back to a simple
+# purple box on terminals without truecolor.
+M0=' \033[0m\033[38;2;255;169;255m\xe2\x96\x84\033[0m\033[38;2;255;215;255m\xe2\x96\x84\033[0m\033[38;2;230;162;255m\xe2\x96\x84\033[38;2;226;127;255m\033[48;2;230;159;255m\xe2\x96\x80\033[38;2;234;146;255m\033[48;2;228;155;255m\xe2\x96\x80\033[38;2;211;113;255m\033[48;2;228;155;255m\xe2\x96\x80\033[0m\033[38;2;221;152;255m\xe2\x96\x84\033[0m\033[38;2;217;146;255m\xe2\x96\x84\033[0m\033[38;2;210;108;255m\xe2\x96\x84 \033[0m'
+M1='\033[0m\033[38;2;211;110;255m\xe2\x96\x80\033[38;2;224;155;255m\033[48;2;189;77;255m\xe2\x96\x80\033[38;2;213;148;255m\033[48;2;172;132;255m\xe2\x96\x80\033[0m\033[38;2;169;128;255m\xe2\x96\x84\033[0m\033[38;2;163;127;255m\xe2\x96\x84\033[38;2;193;138;255m\033[48;2;159;122;255m\xe2\x96\x80\033[0m\033[38;2;152;120;255m\xe2\x96\x84\033[0m\033[38;2;142;118;255m\xe2\x96\x84\033[38;2;175;137;255m\033[48;2;141;117;255m\xe2\x96\x80\033[38;2;175;134;255m\033[48;2;142;5;255m\xe2\x96\x80\033[0m\033[38;2;157;21;255m\xe2\x96\x80\033[0m'
+M2='      \033[0m\033[38;2;132;0;255m\xe2\x96\x80\033[0m\033[38;2;130;0;255m\xe2\x96\x80   \033[0m'
+
 banner() {
-  printf "\n"
-  printf "  ${P}${B}\xe2\x96\x9b\xe2\x96\x80\xe2\x96\x80\xe2\x96\x80\xe2\x96\x9c${R}  ${P}${B}darkcode${R} ${DIM}installer${R}\n"
-  printf "  ${P}${B}\xe2\x96\x8c\xe2\x96\xaa \xe2\x96\xaa\xe2\x96\x90${R}  ${DIM}a terminal coding agent wired to your own private LLM${R}\n"
-  printf "  ${P}${B}\xe2\x96\x99\xe2\x96\x84\xe2\x96\x84\xe2\x96\x84\xe2\x96\x9f${R}\n\n"
+  printf '\n'
+  if [ "${COLORTERM:-}" = "truecolor" ] || [ "${COLORTERM:-}" = "24bit" ]; then
+    printf "  %b   ${P}${B}darkcode${R} ${DIM}installer${R}\n" "$M0"
+    printf "  %b   ${DIM}a terminal coding agent wired to your own private LLM${R}\n" "$M1"
+    printf "  %b\n\n" "$M2"
+  else
+    printf "  ${P}${B}\xe2\x96\x9b\xe2\x96\x80\xe2\x96\x80\xe2\x96\x80\xe2\x96\x9c${R}  ${P}${B}darkcode${R} ${DIM}installer${R}\n"
+    printf "  ${P}${B}\xe2\x96\x8c\xe2\x96\xaa \xe2\x96\xaa\xe2\x96\x90${R}  ${DIM}a terminal coding agent wired to your own private LLM${R}\n"
+    printf "  ${P}${B}\xe2\x96\x99\xe2\x96\x84\xe2\x96\x84\xe2\x96\x84\xe2\x96\x9f${R}\n\n"
+  fi
 }
 
 # ---- preflight health check -------------------------------------------------------------------
@@ -162,28 +175,49 @@ do_uninstall() {
   printf "${DIM}  Your sign-in/config in ~/.config/darkcode was kept. Delete it too if you like.${R}\n\n"
 }
 
-# ---- interactive menu (simple numbered prompt, read from /dev/tty) -----------------------------
-# Deliberately NOT a raw-mode arrow-key menu: that needs `read -t <frac>` + cursor math, which breaks
-# on macOS's bash 3.2 ("invalid timeout specification") and glitches the redraw. A numbered prompt is
-# bulletproof across every shell and reads cleanly from /dev/tty under `curl | bash`.
+# ---- interactive menu (arrow-key selection, read from /dev/tty) --------------------------------
+# up/down (or j/k) to move, Enter to pick, 1-4 as shortcuts. Reads one raw char at a time from
+# /dev/tty so it works under `curl | bash`. Deliberately NO `read -t <frac>` (that errors on macOS's
+# bash 3.2 - "invalid timeout specification"); the ESC prefix is followed by reading exactly 2 more
+# bytes, which arrow keys always send. Each redraw clears its lines (\r + CSI-K) so there are no
+# artifacts.
 menu() {
-  local def="1"; [ -d "$INSTALL_DIR/.git" ] && def="2"    # already installed -> default to Update
-  {
-    printf '  %b1%b  Install    %bset up darkcode + Bun, link it onto your PATH%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
-    printf '  %b2%b  Update     %bpull the latest darkcode into your existing install%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
-    printf '  %b3%b  Uninstall  %bremove darkcode (keeps your login + Bun)%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
-    printf '  %b4%b  Quit%b\n\n' "${P}${B}" "${R}" "${DIM}" "${R}"
-    printf '  Choose %b[1-4]%b (default %b%s%b): ' "${DIM}" "${R}" "${P}${B}" "$def" "${R}"
-  } > /dev/tty
-  local n=""; read -r n < /dev/tty || n="4"
-  [ -z "$n" ] && n="$def"
-  printf '\n' > /dev/tty
-  case "$n" in
-    1|i|install)   printf 'install' ;;
-    2|u|update)    printf 'update' ;;
-    3|uninstall|remove) printf 'uninstall' ;;
-    *)             printf 'quit' ;;
-  esac
+  local labels=("Install" "Update" "Uninstall" "Quit")
+  local descs=("set up darkcode + Bun, link it onto your PATH" \
+               "pull the latest darkcode into your existing install" \
+               "remove darkcode (keeps your login + Bun)" "")
+  local acts=(install update uninstall quit)
+  local count=4 sel=0 key
+  [ -d "$INSTALL_DIR/.git" ] && sel=1     # already installed -> start on Update
+  printf '  %bup/down%b to move, %bEnter%b to select (or %b1-4%b):\n\n' "${DIM}" "${R}" "${DIM}" "${R}" "${DIM}" "${R}" > /dev/tty
+  printf '\033[?25l' > /dev/tty           # hide cursor
+  _draw() {
+    local i
+    for i in 0 1 2 3; do
+      if [ "$i" -eq "$sel" ]; then
+        printf '\r\033[K  %b> %-10s%b %b%s%b\n' "${P}${B}" "${labels[$i]}" "${R}" "${DIM}" "${descs[$i]}" "${R}" > /dev/tty
+      else
+        printf '\r\033[K    %-10s %b%s%b\n' "${labels[$i]}" "${DIM}" "${descs[$i]}" "${R}" > /dev/tty
+      fi
+    done
+  }
+  _draw
+  while IFS= read -rsn1 key < /dev/tty; do
+    case "$key" in
+      $'\033') IFS= read -rsn2 key < /dev/tty
+               case "$key" in '[A'|'OA') sel=$(((sel-1+count)%count)) ;; '[B'|'OB') sel=$(((sel+1)%count)) ;; esac ;;
+      k) sel=$(((sel-1+count)%count)) ;;
+      j) sel=$(((sel+1)%count)) ;;
+      ''|$'\n') break ;;
+      [1-4]) sel=$((key-1)); break ;;
+      q|Q) sel=3; break ;;
+      *) continue ;;
+    esac
+    printf '\033[%dA' "$count" > /dev/tty
+    _draw
+  done
+  printf '\033[?25h\n' > /dev/tty         # show cursor
+  printf '%s' "${acts[$sel]}"
 }
 
 # ---- dispatch ---------------------------------------------------------------------------------
