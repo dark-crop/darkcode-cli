@@ -2365,7 +2365,12 @@ function Task(props: ToolProps) {
   })
 
   const content = createMemo(() => {
-    const description = stringValue(props.input.description)
+    // Fall back to a label derived from the prompt/type when the model omitted `description` (common
+    // when fanning out several at once) so a subagent never renders as a blank bar.
+    const description =
+      stringValue(props.input.description) ||
+      (stringValue(props.input.prompt) ?? "").trim().split(/\s+/).slice(0, 6).join(" ") ||
+      Locale.titlecase(stringValue(props.input.subagent_type) ?? "Subagent")
     if (!description) return ""
     let content = [
       formatSubagentTitle(

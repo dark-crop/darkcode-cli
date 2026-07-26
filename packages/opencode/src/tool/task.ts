@@ -45,7 +45,12 @@ const BACKGROUND_UPDATED = [
 ].join("\n")
 
 const BaseParameterFields = {
-  description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
+  // Optional: some models (esp. when fanning out several at once) omit it, which used to fail the
+  // whole call with a SchemaError and render an ugly red retry block. If missing, we derive a short
+  // label from the prompt instead of rejecting the call.
+  description: Schema.optional(Schema.String).annotate({
+    description: "A short (3-5 words) description of the task. Optional - derived from the prompt if omitted.",
+  }),
   prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
   subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
   model: Schema.optional(Schema.String).annotate({
@@ -103,6 +108,12 @@ export const TaskTool = Tool.define(
       ctx: Tool.Context,
     ) {
       const cfg = yield* config.get()
+      // Derive a short label when the model omits `description` (common when fanning out several at
+      // once) so the call never fails a schema check and every subagent still renders a name.
+      const description =
+        params.description?.trim() ||
+        params.prompt?.trim().split(/\s+/).slice(0, 6).join(" ") ||
+        `${params.subagent_type} task`
       const runInBackground = params.background === true
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(
@@ -116,7 +127,7 @@ export const TaskTool = Tool.define(
           patterns: [params.subagent_type],
           always: ["*"],
           metadata: {
-            description: params.description,
+            description: description,
             subagent_type: params.subagent_type,
           },
         })
@@ -152,7 +163,7 @@ export const TaskTool = Tool.define(
         session ??
         (yield* sessions.create({
           parentID: ctx.sessionID,
-          title: params.description + ` (@${next.name} subagent)`,
+          title: description + ` (@${next.name} subagent)`,
           agent: next.name,
           permission: [
             ...childPermission,
@@ -228,7 +239,7 @@ export const TaskTool = Tool.define(
       }
 
       yield* ctx.metadata({
-        title: params.description,
+        title: description,
         metadata,
       })
 
@@ -270,8 +281,8 @@ export const TaskTool = Tool.define(
                   state,
                   summary:
                     state === "completed"
-                      ? `Background task completed: ${params.description}`
-                      : `Background task failed: ${params.description}`,
+                      ? `Background task completed: ${description}`
+                      : `Background task failed: ${description}`,
                   text,
                 }),
               },
@@ -293,7 +304,7 @@ export const TaskTool = Tool.define(
 
       if (yield* background.extend({ id: nextSession.id, run: runTask() })) {
         return {
-          title: params.description,
+          title: description,
           metadata: {
             ...metadata,
             background: true,
@@ -311,11 +322,11 @@ export const TaskTool = Tool.define(
       const info = yield* background.start({
         id: nextSession.id,
         type: id,
-        title: params.description,
+        title: description,
         metadata,
         onPromote: Effect.all([
           ctx.metadata({
-            title: params.description,
+            title: description,
             metadata: { ...metadata, background: true, jobId: nextSession.id },
           }),
           notify(nextSession.id),
@@ -325,7 +336,7 @@ export const TaskTool = Tool.define(
 
       function backgroundResult() {
         return {
-          title: params.description,
+          title: description,
           metadata: {
             ...metadata,
             background: true,
@@ -366,7 +377,7 @@ export const TaskTool = Tool.define(
             if (result?.status === "error") return yield* Effect.fail(new Error(result.error ?? "Task failed"))
             if (result?.status === "cancelled") return yield* Effect.fail(new Error("Task cancelled"))
             return {
-              title: params.description,
+              title: description,
               metadata,
               output: renderOutput({ sessionID: nextSession.id, state: "completed", text: result?.output ?? "" }),
             }
