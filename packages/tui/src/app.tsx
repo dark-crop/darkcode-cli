@@ -754,11 +754,14 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "agent.cycle",
-        title: "Agent cycle",
+        title: "Cycle mode",
         category: "Agent",
         hidden: true,
         run: () => {
-          local.agent.move(1)
+          // Tab cycles the interaction mode (manual -> accept edits -> plan -> auto). Plan mode drives
+          // the read-only Plan agent; every other mode runs the Build agent.
+          const mode = local.permission.cycle(1)
+          local.agent.set(mode === "plan" ? "plan" : "build")
         },
       },
       {
@@ -788,11 +791,12 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "agent.cycle.reverse",
-        title: "Agent cycle reverse",
+        title: "Cycle mode (reverse)",
         category: "Agent",
         hidden: true,
         run: () => {
-          local.agent.move(-1)
+          const mode = local.permission.cycle(-1)
+          local.agent.set(mode === "plan" ? "plan" : "build")
         },
       },
       {

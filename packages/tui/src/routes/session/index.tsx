@@ -339,9 +339,11 @@ export function Session() {
 
     if (part.tool === "plan_exit") {
       local.agent.set("build")
+      if (local.permission.mode === "plan") local.permission.set("manual")
       lastSwitch = part.id
     } else if (part.tool === "plan_enter") {
       local.agent.set("plan")
+      local.permission.set("plan")
       lastSwitch = part.id
     }
   })

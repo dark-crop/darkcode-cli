@@ -14,6 +14,7 @@ import { registerOpencodeSpinner } from "../register-spinner"
 import path from "path"
 import { fileURLToPath } from "url"
 import { useLocal } from "../../context/local"
+import { PERMISSION_MODE_META } from "../../context/permission"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { tint, useTheme } from "../../context/theme"
 import { useTuiPaths, useTuiTerminalEnvironment } from "../../context/runtime"
@@ -1446,19 +1447,27 @@ export function Prompt(props: PromptProps) {
           </box>
         </box>
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
-        {/* Footer section: model/agent on the left, key hints on the right. */}
+        {/* Interaction-mode indicator (Claude-style): its own line under the input, coloured per mode,
+            with the pause/fast-forward glyph. Tab / Shift+Tab cycle manual -> accept edits -> plan -> auto. */}
+        <Show when={status().type === "idle" && store.mode === "normal"}>
+          <box width="100%" paddingLeft={2} paddingRight={2}>
+            <text wrapMode="none">
+              <span style={{ fg: theme[PERMISSION_MODE_META[local.permission.mode].color], bold: true }}>
+                {PERMISSION_MODE_META[local.permission.mode].icon} {PERMISSION_MODE_META[local.permission.mode].label}
+              </span>
+              <span style={{ fg: theme.textMuted }}> (shift+tab to cycle)</span>
+            </text>
+          </box>
+        </Show>
+        {/* Footer section: model on the left, key hints on the right. */}
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
-          <Show when={status().type === "idle" && store.mode === "normal" && local.agent.current()}>
-            {(agent) => (
-              <box flexDirection="row" gap={1} flexShrink={0}>
-                <text fg={highlight()}>{Locale.titlecase(agent().name)}</text>
-                <text fg={theme.textMuted}>·</text>
-                <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>
-                  {local.model.parsed().model}
-                </text>
-                <text fg={theme.textMuted}>{currentProviderLabel()}</text>
-              </box>
-            )}
+          <Show when={status().type === "idle" && store.mode === "normal"}>
+            <box flexDirection="row" gap={1} flexShrink={0}>
+              <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>
+                {local.model.parsed().model}
+              </text>
+              <text fg={theme.textMuted}>{currentProviderLabel()}</text>
+            </box>
           </Show>
           <Switch>
             <Match when={status().type !== "idle"}>

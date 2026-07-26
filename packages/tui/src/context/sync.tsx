@@ -189,10 +189,12 @@ export const {
 
         case "permission.asked": {
           const request = event.properties
-          if (permission.mode === "auto") {
+          // auto = approve everything; accept edits = approve file edits only; manual/plan ask.
+          const autoReply = permission.autoReply(request.permission)
+          if (autoReply) {
             void sdk.client.permission.reply({
               requestID: request.id,
-              reply: "once",
+              reply: autoReply,
               directory,
               workspace,
             })
