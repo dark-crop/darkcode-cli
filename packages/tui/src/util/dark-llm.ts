@@ -35,14 +35,17 @@ export function composeDarkLlmModel(family: Lane, tier: Tier) {
  *  name "Mr. President 1.1" + context 262144  ->  title "Mr. President", desc "1.1 · 262K".
  *  Renaming/re-versioning on the gateway flows through with zero client changes. */
 export function darkLlmLanes(
-  models: Record<string, { name?: string; family?: string; description?: string; limit?: { context?: number } }>,
+  models: Record<
+    string,
+    { name?: string; family?: string; description?: string; online?: boolean; limit?: { context?: number } }
+  >,
 ) {
-  const byFamily = new Map<string, { label: string; description: string }>()
+  const byFamily = new Map<string, { label: string; description: string; online: boolean }>()
   for (const [id, info] of Object.entries(models)) {
     const m = id.match(/^(.+)-(low|med|high|ultra)$/)
     if (!m) continue
     const family = info.family ?? m[1]
-    if (byFamily.has(family)) continue
+    if (byFamily.has(family)) continue // one entry per family; all tiers share the same backend status
     // Title = the full gateway display name (incl. version), tier suffix stripped.
     const label = (info.name ?? id).replace(/\s*·\s*(low|med|high|ultra)\s*$/i, "").trim() || family
     // Description is gateway-owned (litellm model_info.description) so re-copy needs no client
@@ -51,7 +54,13 @@ export function darkLlmLanes(
     const fmtCtx = (n?: number) =>
       !n ? "1M" : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${Math.round(n / 1000)}K`
     const description = info.description?.trim() ? info.description.trim() : ctx ? `${fmtCtx(ctx)} context` : ""
-    byFamily.set(family, { label, description })
+    // online is undefined (unknown) unless the gateway status page explicitly reported it offline.
+    byFamily.set(family, { label, description, online: info.online !== false })
   }
-  return [...byFamily].map(([family, v]) => ({ family, label: v.label, description: v.description }))
+  return [...byFamily].map(([family, v]) => ({
+    family,
+    label: v.label,
+    description: v.description,
+    online: v.online,
+  }))
 }

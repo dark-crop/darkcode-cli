@@ -67,6 +67,10 @@ export const Model = Schema.Struct({
   // model_info.description) and surfaced in the lane picker. Kept in-schema so it
   // survives the config -> sync encode that reaches the TUI.
   description: Schema.optional(Schema.String),
+  // Live availability for dark-llm lanes (synced from the gateway's public /app/models/status).
+  // undefined = unknown/not-probed (treated as available); false = the lane's backend is offline.
+  // In-schema so it survives the config -> sync encode that reaches the TUI lane picker.
+  online: Schema.optional(Schema.Boolean),
   release_date: Schema.String,
   attachment: Schema.Boolean,
   reasoning: Schema.Boolean,

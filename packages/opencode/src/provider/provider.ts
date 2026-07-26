@@ -1052,6 +1052,10 @@ export const Model = Schema.Struct({
   // Optional one-line description (gateway-owned for dark-llm: litellm model_info.description),
   // surfaced in the lane picker. In-schema so it survives the encode that syncs models to the TUI.
   description: optional(Schema.String),
+  // Live lane availability synced from the gateway's public /app/models/status (dark-llm only).
+  // false = backend offline; undefined = unknown/available. Surfaced in the lane picker (offline
+  // lanes render red + non-selectable). In-schema so it survives the encode that syncs to the TUI.
+  online: optional(Schema.Boolean),
   capabilities: ProviderCapabilities,
   cost: ProviderCost,
   limit: ProviderLimit,
@@ -1707,6 +1711,26 @@ const layer = Layer.effect(
                   }
                 } catch {}
 
+                // Live lane availability from the gateway's PUBLIC status page (same source the
+                // /app/models page shows). Names there ("Mr.President Lv.284") equal the lanes'
+                // display_name, so an offline lane is matched by name and marked non-selectable in
+                // the picker. Best-effort: any failure leaves lanes as available (unknown).
+                const offlineNames = new Set<string>()
+                try {
+                  const root = base.replace(/\/v1$/, "")
+                  const ctrl3 = new AbortController()
+                  const timer3 = setTimeout(() => ctrl3.abort(), 4000)
+                  const statusRes = await fetch(`${root}/app/models/status`, { signal: ctrl3.signal })
+                  clearTimeout(timer3)
+                  if (statusRes.ok) {
+                    const status = (await statusRes.json()) as {
+                      services?: Array<{ name?: string; status?: string }>
+                    }
+                    for (const s of status.services ?? [])
+                      if (s.name && s.status && s.status !== "online") offlineNames.add(s.name)
+                  }
+                } catch {}
+
                 // Drop gateway models flagged hidden in /model/info (e.g. the Qwen3-VL backend that
                 // powers the president lane's delegated vision - it must not show as its own lane).
                 const visibleIds = ids.filter((id) => !meta.get(id)?.hidden)
@@ -1756,6 +1780,10 @@ const layer = Layer.effect(
                     if (typeof mm?.costIn === "number") cost.input = mm.costIn * 1_000_000
                     if (typeof mm?.costOut === "number") cost.output = mm.costOut * 1_000_000
                   }
+                  // Live availability: offline if the lane's display_name is in the status page's
+                  // offline set. Only assert false when we actually saw it offline; otherwise leave
+                  // undefined (available) so a status-fetch failure never greys out a working lane.
+                  if (mm?.name && offlineNames.has(mm.name)) (models[id] as any).online = false
                 }
               } catch {}
             })
