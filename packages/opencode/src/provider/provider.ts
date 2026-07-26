@@ -1659,6 +1659,8 @@ const layer = Layer.effect(
                     description?: string
                     vision?: boolean
                     hidden?: boolean
+                    costIn?: number
+                    costOut?: number
                   }
                 >()
                 try {
@@ -1681,6 +1683,8 @@ const layer = Layer.effect(
                           description?: string
                           supports_vision?: boolean
                           hidden?: boolean
+                          input_cost_per_token?: number
+                          output_cost_per_token?: number
                         }
                       }>
                     }
@@ -1693,6 +1697,11 @@ const layer = Layer.effect(
                         description: m.model_info?.description,
                         vision: m.model_info?.supports_vision === true,
                         hidden: m.model_info?.hidden === true,
+                        // Gateway-owned per-token price (litellm model_info). Kept per-1M to match
+                        // the models.dev cost convention. This is the signal fan-out uses to pick
+                        // the cheapest lane (task.ts), so it must never be hardcoded client-side.
+                        costIn: m.model_info?.input_cost_per_token,
+                        costOut: m.model_info?.output_cost_per_token,
                       })
                     }
                   }
@@ -1739,6 +1748,13 @@ const layer = Layer.effect(
                   if (caps) {
                     caps.attachment = vision
                     if (caps.input) caps.input.image = vision
+                  }
+                  // Gateway-owned price -> per-1M cost (models.dev convention). Lets /context show a
+                  // real cost and lets fan-out rank lanes by actual price (task.ts) with no hardcoding.
+                  const cost = (models[id] as any).cost
+                  if (cost) {
+                    if (typeof mm?.costIn === "number") cost.input = mm.costIn * 1_000_000
+                    if (typeof mm?.costOut === "number") cost.output = mm.costOut * 1_000_000
                   }
                 }
               } catch {}

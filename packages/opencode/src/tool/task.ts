@@ -10,6 +10,10 @@ import { Agent } from "../agent/agent"
 import { deriveSubagentSessionPermission } from "../agent/subagent-permissions"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
+import { Provider } from "@/provider/provider"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { DARK_LLM_PROVIDER_ID } from "../config/builtin-provider"
 import { Effect, Exit, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -44,6 +48,10 @@ const BaseParameterFields = {
   description: Schema.String.annotate({ description: "A short (3-5 words) description of the task" }),
   prompt: Schema.String.annotate({ description: "The task for the agent to perform" }),
   subagent_type: Schema.String.annotate({ description: "The type of specialized agent to use for this task" }),
+  model: Schema.optional(Schema.String).annotate({
+    description:
+      'Optional model lane for this subagent, e.g. "mr-agent-1-0". Leave UNSET for fan-out: the subagent then auto-runs on the most efficient (cheapest) lane available while keeping the current effort tier. Only set this when the user asked for a specific lane for the sub-work (any lane, lower or higher).',
+  }),
   task_id: Schema.optional(Schema.String).annotate({
     description:
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
@@ -84,6 +92,7 @@ export const TaskTool = Tool.define(
     const agent = yield* Agent.Service
     const background = yield* BackgroundJob.Service
     const config = yield* Config.Service
+    const provider = yield* Provider.Service
     const sessions = yield* Session.Service
     const scope = yield* Scope.Scope
     const flags = yield* RuntimeFlags.Service
@@ -164,10 +173,53 @@ export const TaskTool = Tool.define(
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
       const variant = msg.info.variant
 
-      const model = next.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      // Fan-out cost control: a subagent with no pinned model runs on the CHEAPEST dark-llm lane
+      // available (real per-token price from the gateway, so nothing is hardcoded), keeping the
+      // parent's effort tier. A caller can pass params.model to force a specific lane when the user
+      // asked for one; a garbage value falls back to the auto-pick. Non-dark-llm parents are left
+      // exactly as before (inherit the parent model). Capture the parent ids here in the outer
+      // scope so the assistant-role narrowing survives into the closure below.
+      const parentProviderID = msg.info.providerID
+      const parentModelID = msg.info.modelID
+      const TIER = /-(low|med|high|ultra)$/
+      const composeDark = (family: string, tier: string) => ({
+        providerID: parentProviderID,
+        modelID: ModelV2.ID.make(`${family}-${tier}`),
+      })
+      const fanoutModel = next.model
+        ? undefined
+        : yield* Effect.gen(function* () {
+            if (parentProviderID !== DARK_LLM_PROVIDER_ID) return undefined
+            const tier = parentModelID.match(TIER)?.[1]
+            if (!tier) return undefined
+            const dark = yield* provider.getProvider(ProviderV2.ID.make(DARK_LLM_PROVIDER_ID))
+            const cheapest = new Map<string, number>() // family -> lowest input cost
+            for (const m of Object.values(dark.models)) {
+              const family = m.family ?? m.id.replace(TIER, "")
+              const price = m.cost?.input ?? Infinity
+              if (price < (cheapest.get(family) ?? Infinity)) cheapest.set(family, price)
+            }
+            const laneHasTier = (family: string) => Boolean(dark.models[`${family}-${tier}`])
+            if (params.model) {
+              const requested = params.model.replace(TIER, "")
+              if (laneHasTier(requested)) return composeDark(requested, tier)
+              if (dark.models[params.model])
+                return { providerID: parentProviderID, modelID: ModelV2.ID.make(params.model) }
+              // unrecognized lane -> ignore and fall through to the auto pick
+            }
+            const parentFamily = parentModelID.replace(TIER, "")
+            const pick = [...cheapest.entries()]
+              .filter(([family]) => laneHasTier(family))
+              .sort((a, b) => a[1] - b[1])[0]?.[0]
+            if (!pick || pick === parentFamily) return undefined // already on the cheapest lane
+            return composeDark(pick, tier)
+          })
+      const model = next.model ??
+        fanoutModel ?? {
+          modelID: msg.info.modelID,
+          providerID: msg.info.providerID,
+        }
+      const customModel = Boolean(next.model ?? fanoutModel)
       const metadata = {
         parentSessionId: ctx.sessionID,
         sessionId: nextSession.id,
@@ -192,7 +244,7 @@ export const TaskTool = Tool.define(
             modelID: model.modelID,
             providerID: model.providerID,
           },
-          variant: next.model ? undefined : variant,
+          variant: customModel ? undefined : variant,
           agent: next.name,
           parts,
         })
