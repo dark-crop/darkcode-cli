@@ -26,19 +26,24 @@ bad()   { printf "  ${RED}fail${R} %s\n" "$*"; }
 die()   { printf "${RED}darkcode install: %s${R}\n" "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
-# The real darkcode mascot (the purple blob from the CLI), rendered as truecolor half-blocks.
+# The real darkcode mascot (the purple blob from the CLI), rendered as FULL truecolor cells (one
+# bg-colored cell per sprite pixel, exactly like the CLI) so it reads ~1:1 and isn't squeezed.
 # Generated from packages/tui/src/component/mascot-sprite.ts (MASCOT_MINI). Falls back to a simple
 # purple box on terminals without truecolor.
-M0=' \033[0m\033[38;2;255;169;255m\xe2\x96\x84\033[0m\033[38;2;255;215;255m\xe2\x96\x84\033[0m\033[38;2;230;162;255m\xe2\x96\x84\033[38;2;226;127;255m\033[48;2;230;159;255m\xe2\x96\x80\033[38;2;234;146;255m\033[48;2;228;155;255m\xe2\x96\x80\033[38;2;211;113;255m\033[48;2;228;155;255m\xe2\x96\x80\033[0m\033[38;2;221;152;255m\xe2\x96\x84\033[0m\033[38;2;217;146;255m\xe2\x96\x84\033[0m\033[38;2;210;108;255m\xe2\x96\x84 \033[0m'
-M1='\033[0m\033[38;2;211;110;255m\xe2\x96\x80\033[38;2;224;155;255m\033[48;2;189;77;255m\xe2\x96\x80\033[38;2;213;148;255m\033[48;2;172;132;255m\xe2\x96\x80\033[0m\033[38;2;169;128;255m\xe2\x96\x84\033[0m\033[38;2;163;127;255m\xe2\x96\x84\033[38;2;193;138;255m\033[48;2;159;122;255m\xe2\x96\x80\033[0m\033[38;2;152;120;255m\xe2\x96\x84\033[0m\033[38;2;142;118;255m\xe2\x96\x84\033[38;2;175;137;255m\033[48;2;141;117;255m\xe2\x96\x80\033[38;2;175;134;255m\033[48;2;142;5;255m\xe2\x96\x80\033[0m\033[38;2;157;21;255m\xe2\x96\x80\033[0m'
-M2='      \033[0m\033[38;2;132;0;255m\xe2\x96\x80\033[0m\033[38;2;130;0;255m\xe2\x96\x80   \033[0m'
+MC0='    \033[48;2;226;127;255m \033[48;2;234;146;255m \033[48;2;211;113;255m     \033[0m'
+MC1=' \033[48;2;255;169;255m \033[48;2;255;215;255m \033[48;2;230;162;255m \033[48;2;230;159;255m \033[48;2;228;155;255m \033[48;2;228;155;255m \033[48;2;221;152;255m \033[48;2;217;146;255m \033[48;2;210;108;255m  \033[0m'
+MC2='\033[48;2;211;110;255m \033[48;2;224;155;255m \033[48;2;213;148;255m   \033[48;2;193;138;255m   \033[48;2;175;137;255m \033[48;2;175;134;255m \033[48;2;157;21;255m \033[0m'
+MC3=' \033[48;2;189;77;255m \033[48;2;172;132;255m \033[48;2;169;128;255m \033[48;2;163;127;255m \033[48;2;159;122;255m \033[48;2;152;120;255m \033[48;2;142;118;255m \033[48;2;141;117;255m \033[48;2;142;5;255m  \033[0m'
+MC4='      \033[48;2;132;0;255m \033[48;2;130;0;255m    \033[0m'
 
 banner() {
   printf '\n'
   if [ "${COLORTERM:-}" = "truecolor" ] || [ "${COLORTERM:-}" = "24bit" ]; then
-    printf "  %b   ${P}${B}darkcode${R} ${DIM}installer${R}\n" "$M0"
-    printf "  %b   ${DIM}a terminal coding agent wired to your own private LLM${R}\n" "$M1"
-    printf "  %b\n\n" "$M2"
+    printf "  %b\n" "$MC0"
+    printf "  %b   ${P}${B}darkcode${R} ${DIM}installer${R}\n" "$MC1"
+    printf "  %b   ${DIM}a terminal coding agent wired to your own private LLM${R}\n" "$MC2"
+    printf "  %b\n" "$MC3"
+    printf "  %b\n\n" "$MC4"
   else
     printf "  ${P}${B}\xe2\x96\x9b\xe2\x96\x80\xe2\x96\x80\xe2\x96\x80\xe2\x96\x9c${R}  ${P}${B}darkcode${R} ${DIM}installer${R}\n"
     printf "  ${P}${B}\xe2\x96\x8c\xe2\x96\xaa \xe2\x96\xaa\xe2\x96\x90${R}  ${DIM}a terminal coding agent wired to your own private LLM${R}\n"

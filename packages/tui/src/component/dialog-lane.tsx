@@ -24,9 +24,8 @@ export function DialogLane() {
     lanes().map((lane) => ({
       value: lane.family,
       title: lane.label,
-      // Render the description on its own muted line below the name (full width, no
-      // truncation), instead of cramming it inline next to the title.
-      details: lane.description ? [lane.description] : undefined,
+      // Render the description inline (muted) on the SAME line as the name, not on a line below.
+      label: lane.description,
       onSelect: () => {
         dialog.clear()
         local.model.set(composeDarkLlmModel(lane.family, parsed()?.tier ?? "high"), { recent: true })
