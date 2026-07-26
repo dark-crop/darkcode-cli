@@ -1459,16 +1459,9 @@ export function Prompt(props: PromptProps) {
             </text>
           </box>
         </Show>
-        {/* Footer section: model on the left, key hints on the right. */}
+        {/* Footer section: the model is intentionally NOT shown here (it lives in the start header and
+            the /model picker). Left side is empty; key hints + cwd render on the right. */}
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
-          <Show when={status().type === "idle" && store.mode === "normal"}>
-            <box flexDirection="row" gap={1} flexShrink={0}>
-              <text flexShrink={0} fg={leader() ? theme.textMuted : theme.text}>
-                {local.model.parsed().model}
-              </text>
-              <text fg={theme.textMuted}>{currentProviderLabel()}</text>
-            </box>
-          </Show>
           <Switch>
             <Match when={status().type !== "idle"}>
               <box

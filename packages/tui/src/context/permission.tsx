@@ -15,9 +15,9 @@ export const PERMISSION_MODE_META: Record<
   PermissionMode,
   { label: string; icon: string; color: "textMuted" | "primary" | "success" | "warning" }
 > = {
-  manual: { label: "manual mode on", icon: "II", color: "textMuted" },
+  manual: { label: "manual mode on", icon: "⏸", color: "textMuted" },
   acceptEdits: { label: "accept edits on", icon: "▶▶", color: "primary" },
-  plan: { label: "plan mode on", icon: "II", color: "success" },
+  plan: { label: "plan mode on", icon: "⏸", color: "success" },
   auto: { label: "auto mode on", icon: "▶▶", color: "warning" },
 }
 
