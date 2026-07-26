@@ -63,6 +63,10 @@ export const Model = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
   family: Schema.optional(Schema.String),
+  // Optional one-line flavor/description, gateway-owned for dark-llm (litellm
+  // model_info.description) and surfaced in the lane picker. Kept in-schema so it
+  // survives the config -> sync encode that reaches the TUI.
+  description: Schema.optional(Schema.String),
   release_date: Schema.String,
   attachment: Schema.Boolean,
   reasoning: Schema.Boolean,

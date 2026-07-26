@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js"
+import { createMemo, onMount } from "solid-js"
 import { useLocal } from "../context/local"
 import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
@@ -11,6 +11,8 @@ export function DialogLane() {
   const local = useLocal()
   const dialog = useDialog()
   const sync = useSync()
+  // Wider modal so the (gateway-owned) lane descriptions have room to breathe.
+  onMount(() => dialog.setSize("large"))
   const parsed = createMemo(() => parseDarkLlmModel(local.model.current()))
 
   const lanes = createMemo(() => {
