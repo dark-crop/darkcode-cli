@@ -1049,6 +1049,9 @@ export const Model = Schema.Struct({
   api: ProviderApiInfo,
   name: Schema.String,
   family: optional(Schema.String),
+  // Optional one-line description (gateway-owned for dark-llm: litellm model_info.description),
+  // surfaced in the lane picker. In-schema so it survives the encode that syncs models to the TUI.
+  description: optional(Schema.String),
   capabilities: ProviderCapabilities,
   cost: ProviderCost,
   limit: ProviderLimit,
@@ -1717,11 +1720,14 @@ const layer = Layer.effect(
                   if (mm?.description) (models[id] as any).description = mm.description
                   // Vision is gateway-owned too (model_info.supports_vision): only vision lanes accept
                   // image attachments. The chat lanes are text-only vLLM now (no mmproj), so marking
-                  // them attachment:false stops the UI from sending images the model rejects
+                  // them non-attachment stops the UI from sending images the model rejects
                   // ("... is not a multimodal model"). Default to text-only when the gateway is silent.
                   const vision = mm?.vision === true
-                  models[id].attachment = vision
-                  models[id].modalities = { input: vision ? ["text", "image"] : ["text"], output: ["text"] }
+                  const caps = (models[id] as any).capabilities
+                  if (caps) {
+                    caps.attachment = vision
+                    if (caps.input) caps.input.image = vision
+                  }
                 }
               } catch {}
             })
