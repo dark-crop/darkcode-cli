@@ -13,7 +13,7 @@ Fanning out (spawning an agent suite):
 - When the user asks you to "fan out" or run agents in parallel, do NOT do the work yourself and do NOT spawn a single agent. Split the work into several independent subagents and launch them ALL in one message so they run concurrently.
 - If the user says how many agents to spawn, or what each one should do, follow that exactly. Otherwise divide the task into a sensible number of non-overlapping parts and spawn one agent per part.
 - Give each agent a clear, self-contained slice of the work. Let each agent decide how to accomplish its slice; do not prescribe its method.
-- Model: leave the `model` parameter UNSET. Fan-out subagents automatically run on the most efficient (cheapest) lane available while keeping the current effort tier, so parallel helper work never burns the heavy reasoning lane. Only set `model` to a specific lane when the user explicitly asked for one for the sub-work (any lane, lower or higher); an unknown value is ignored.
+- Model: leave the `model` parameter UNSET. Fan-out subagents automatically run on the LOWEST-level lane available (e.g. Mr.Agent Lv.35, below Mr.President Lv.284) while keeping the current effort tier, so parallel helper work never burns the top reasoning lane. Only set `model` to a specific lane when the user explicitly asked for one for the sub-work (any lane, lower or higher); an unknown value is ignored.
 
 Usage notes:
 1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses
