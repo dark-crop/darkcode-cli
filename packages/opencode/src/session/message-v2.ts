@@ -222,10 +222,14 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         // text/plain and directory files are converted into text parts, ignore them
         if (part.type === "file" && part.mime !== "text/plain" && part.mime !== "application/x-directory") {
           if (isMedia(part.mime) && (options?.stripMedia || !modelAcceptsMedia(part.mime))) {
-            const hint = options?.stripMedia ? "" : " - this model can't view it; switch to a vision model to analyze images"
+            // Deliberately NO filename here for the capability case: naming a real file (e.g. a .png)
+            // makes the model try to Read it off disk (and a ".png" also trips the gateway tool-strip,
+            // keeping the tools it uses to chase the file). A generic note lets it decline cleanly.
             userMessage.parts.push({
               type: "text",
-              text: `[Attached ${part.mime}: ${part.filename ?? "file"}${hint}]`,
+              text: options?.stripMedia
+                ? `[Attached ${part.mime}: ${part.filename ?? "file"}]`
+                : `[an image was attached but the selected model has no vision; switch to a vision model to view it]`,
             })
           } else {
             userMessage.parts.push({
