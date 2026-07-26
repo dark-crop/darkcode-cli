@@ -1455,7 +1455,7 @@ export function Prompt(props: PromptProps) {
               <span style={{ fg: theme[PERMISSION_MODE_META[local.permission.mode].color], bold: true }}>
                 {PERMISSION_MODE_META[local.permission.mode].icon} {PERMISSION_MODE_META[local.permission.mode].label}
               </span>
-              <span style={{ fg: theme.textMuted }}> (shift+tab to cycle)</span>
+              <span style={{ fg: theme.textMuted }}> (tab to cycle)</span>
             </text>
           </box>
         </Show>
@@ -1614,20 +1614,13 @@ export function Prompt(props: PromptProps) {
               </Show>
               <Switch>
                 <Match when={store.mode === "normal"}>
-                  <Switch>
-                    <Match when={usage()}>
-                      {(item) => (
-                        <text fg={theme.textMuted} wrapMode="none">
-                          {item().context}
-                        </text>
-                      )}
-                    </Match>
-                    <Match when={true}>
-                      <text fg={theme.text}>
-                        {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
+                  <Show when={usage()}>
+                    {(item) => (
+                      <text fg={theme.textMuted} wrapMode="none">
+                        {item().context}
                       </text>
-                    </Match>
-                  </Switch>
+                    )}
+                  </Show>
                 </Match>
                 <Match when={store.mode === "shell"}>
                   <text fg={theme.text}>
