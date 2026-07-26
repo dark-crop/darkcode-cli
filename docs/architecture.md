@@ -20,7 +20,7 @@ The substantive changes are:
 | --- | --- | --- |
 | Providers | Many providers, user picks and configures | Hard-locked to a single built-in `dark-llm` provider |
 | Config dir | `~/.config/opencode` | `~/.config/darkcode` (fully isolated) |
-| Default model | User/model.dev driven | `dark-llm/president-high` |
+| Default model | User/model.dev driven | `dark-llm/mr-president-2-0-high` |
 | Model discovery | models.dev catalog | Live `GET /v1/models` from the gateway, static fallback |
 | Brand/theme | opencode accent | "power purple" accent, default theme `darkcode` |
 | UI | opencode chrome | Claude Code-style: scrolling mascot header, clean input rail, one live working indicator |
@@ -42,19 +42,23 @@ the app will ever load. This happens in two places.
 ### 1. The provider is seeded as a built-in config layer
 
 `packages/opencode/src/config/builtin-provider.ts` defines the provider and its
-model catalog. It exposes chat lanes that each span four effort tiers:
+model catalog. It exposes two chat lanes that each span four effort tiers:
 
-| Lane | Family id | Character | Reasoning tiers |
-| --- | --- | --- | --- |
-| Mr. President 1.1 | `president` | your own uncensored model, served natively on the gateway, the default | high, ultra |
+| Lane | Family id | Backing model | Context | Best for |
+| --- | --- | --- | --- | --- |
+| Mr.President Lv.284 | `mr-president-2-0` | DeepSeek-V4-Flash | 1M (1,048,576 tokens) | complex tasks / reasoning; the default workhorse |
+| Mr.Agent Lv.35 | `mr-agent-1-0` | SuperQwen-AgentWorld-35B-A3B (fast agent-tuned MoE) | 256K (262,144 tokens) | routine / agentic tasks, efficient |
 
-The one chat lane has `low`, `med`, `high`, and `ultra` tiers, so a model id is composed
-as `<family>-<tier>`, e.g. `president-high` (the default). The tiers set the reasoning
-budget: `low` turns thinking off; `med`/`high`/`ultra` raise it. Every tier gets the full
-native 262K context. The lane is vision-capable via its own vision tower, so there is no
-separate vision lane. A `z-image` text-to-image generation model and a `qwen-image-edit`
-image-editing model are also defined. **The lane's display name is loaded live from the
-gateway (`/v1/models` + `/model/info`), never hardcoded in the client.**
+Each lane has `low`, `med`, `high`, and `ultra` tiers, so a model id is composed
+as `<family>-<tier>`, e.g. `mr-president-2-0-high` (the default). The tiers set the reasoning
+budget: `low` turns thinking off (fastest); `med`/`high`/`ultra` raise it; `high` is the default
+tier. Mr.President gets the full 1M context; Mr.Agent gets 256K. The chat models are text-only
+vLLM, but Mr.President still sees images: it sees images via the gateway, which delegates the
+image to a vision model (Qwen3-VL) behind the scenes and feeds the description back, so from the
+user's side you attach an image and it just works. A `z-image` text-to-image generation model and
+a `qwen-image-edit` image-editing model are also defined. **The lanes' display names and
+descriptions are loaded live from the gateway (`/v1/models` + `/model/info`), never hardcoded in
+the client, so renaming or re-pricing on the gateway flows through automatically.**
 
 The provider is emitted by `darkLlmBuiltinConfig()` and points at the gateway:
 
@@ -62,7 +66,7 @@ The provider is emitted by `darkLlmBuiltinConfig()` and points at the gateway:
 // builtin-provider.ts
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "president-high"
+export const DARK_LLM_DEFAULT_MODEL_ID = "mr-president-2-0-high"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 ```
 
@@ -215,9 +219,10 @@ before sign-in; once a key is present, the gateway's `/v1/models` response wins.
    model.
 3. **Provider resolution** - `provider.ts` filters to the allowed provider and,
    if a key is present, refreshes the model list from `GET /v1/models`.
-4. **Model selection** - `/model` shows the model lane and `/effort`
-   picks a tier (low/med/high/ultra); they compose into `<family>-<tier>`. Each
-   lane reads image input directly via its own mmproj projector.
+4. **Model selection** - `/model` shows the two lanes (Mr.President / Mr.Agent) and
+   `/effort` picks a tier (low/med/high/ultra); they compose into `<family>-<tier>`.
+   The chat models are text-only, but Mr.President sees images via the gateway, which
+   delegates the image to a vision model behind the scenes.
 5. **Inference** - the request goes to `https://dark-llm.cropbinary.com/v1` as an
    OpenAI-compatible completion with the `dark-llm` key, and the TUI renders the
    response with the single live working indicator and post-hoc reasoning summary.

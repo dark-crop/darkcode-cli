@@ -30,7 +30,7 @@
 ---
 
 <p align="center">
-  <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with Mr. President 1.1, purple mascot header, live working row" width="840" />
+  <img src="docs/assets/darkcode-tui.png" alt="darkcode TUI: planning a build with Mr.President Lv.284, purple mascot header, live working row" width="840" />
 </p>
 
 ### ⚡ Install (macOS / Linux / WSL)
@@ -54,7 +54,7 @@ OpenAI, no Anthropic, no telemetry to a third party.
 It builds on the proven [opencode](https://github.com/sst/opencode) agent engine (tools, MCP, LSP,
 sub-agents, sessions) but has grown into its own thing on top: the provider lock, an isolated config
 dir, a fully live Claude Code-style interface (streaming reasoning, live diffs, a real FIFO prompt
-queue), one native-vLLM model with effort tiers, and a fully-armed toolbelt - a **real browser**
+queue), two native-vLLM model lanes with effort tiers, and a fully-armed toolbelt - a **real browser**
 (drive and inspect any page), a **background shell** (dev servers, watchers), **code-aware LSP
 navigation**, persistent cross-session **memory**, and **local image generation / editing /
 pose-transfer** - all as first-class agent tools, all pointed at hardware you own.
@@ -66,7 +66,8 @@ flowchart LR
 
     subgraph lanes["built-in dark-llm provider (locked)"]
         direction TB
-        MP["Mr. President 1.1 · 262K"]
+        MP["Mr.President Lv.284 · 1M · sees images"]
+        MA["Mr.Agent Lv.35 · 256K"]
         EF["effort: low · med · high · ultra"]
     end
     subgraph img["image tools (on the gateway)"]
@@ -92,8 +93,8 @@ flowchart LR
 | | |
 |---|---|
 | 🔒 **One gateway, one provider** | Hard-locked to `dark-llm`. No other provider ever appears in the picker. |
-| 🧠 **One model, four efforts** | One native-vLLM lane - **Mr. President 1.1** (full 262K context) - and `/effort` picks the reasoning tier (low → ultra). The model name comes **live from the gateway**, never hardcoded. |
-| 👁 **Every lane reads images** | Attach a screenshot and ask - all chat lanes have vision built in. |
+| 🧠 **Two models, four efforts each** | **Mr.President Lv.284** (DeepSeek, 1M context, the reasoning workhorse) and **Mr.Agent Lv.35** (SuperQwen, 256K, efficient for routine work); `/effort` picks the reasoning tier (low → ultra). Names + descriptions come **live from the gateway**, never hardcoded. |
+| 👁 **President sees images** | Attach a screenshot and ask - Mr.President reads it. It's a text model, so the gateway quietly hands the image to a vision model behind the scenes and feeds back what it sees. You just drop the image; it works. |
 | 🎨 **Images as tools** | Generate, edit, **re-pose**, and **inpaint** images inline - the agent calls them when you ask. |
 | ⚡ **Everything is live** | Reasoning streams **above** the answer step-by-step, writes render as a live green diff, shell output streams in - then each turn ends with a `* <sign-off> (<time>)` run-time line. |
 | ⛓ **Real message queue** | Stack prompts while it's busy and they run **in order** (FIFO); Esc interrupts the current turn and the rest of the queue keeps going. |
@@ -159,29 +160,36 @@ darkcode                      # 1. start the TUI
 > how do I ...                # 3. just talk to it
 ```
 
-The default model is **`president-high`** (Mr. President 1.1, high effort). Non-interactive too:
+The default model is **`mr-president-2-0-high`** (Mr.President Lv.284, high effort). Non-interactive too:
 
 ```bash
-darkcode run --model dark-llm/president-low "explain this stack trace"
+darkcode run --model dark-llm/mr-president-2-0-low "explain this stack trace"
 ```
 
 ## Models
 
-One chat lane - **Mr. President 1.1**, your own uncensored, tool-capable model served natively on your
-GPU box - across four effort tiers. A model id is `<lane>-<tier>` (e.g. `president-med`).
+Two chat lanes, both your own uncensored, tool-capable models served natively on your GPU box, each
+across four effort tiers. A model id is `<lane>-<tier>` (e.g. `mr-president-2-0-med`).
 
-| Tier | Thinking | Context |
-|---|---|---|
-| `low` | off - fastest, cleanest output | 262K |
-| `med` | on - small reasoning budget | 262K |
-| `high` | on (default) - large reasoning budget | 262K |
-| `ultra` | on - max reasoning budget | 262K |
+| Lane | Family | Context | Best for |
+|---|---|---|---|
+| 🧠 **Mr.President Lv.284** | `mr-president-2-0` | **1M** | Complex tasks, deep reasoning - the workhorse (default). **Sees images.** |
+| ⚡ **Mr.Agent Lv.35** | `mr-agent-1-0` | **256K** | Routine, agentic, tool-heavy work - fast and efficient. |
 
-Every tier gets the full native **262K** window; they differ only in how much the model thinks.
-`/effort` switches the tier. **The model name and list come live from the gateway** (`GET /v1/models`
-+ `/model/info`) - darkcode never hardcodes the model, so the picker always shows exactly what your
-key is allowed and whatever the gateway is currently serving. Falls back to a generic label offline.
-See [docs/models.md](docs/models.md).
+Each lane has four effort tiers (the `<tier>`), all at the lane's full context window:
+
+| Tier | Thinking |
+|---|---|
+| `low` | off - fastest, cleanest output |
+| `med` | on - small reasoning budget |
+| `high` | on (default) - large reasoning budget |
+| `ultra` | on - max reasoning budget |
+
+`/model` switches the lane, `/effort` switches the tier. **Names, descriptions, and the model list all
+come live from the gateway** (`GET /v1/models` + `/model/info`) - darkcode never hardcodes them, so the
+picker always shows exactly what your key is allowed and whatever the gateway currently serves (rename
+or re-price a model on the gateway and it flows through with no client change). Falls back to a generic
+label offline. See [docs/models.md](docs/models.md).
 
 ## Browser
 
@@ -226,8 +234,9 @@ make a wide 16:9 landscape of neon mountains         # generate (name a ratio or
 ```
 
 **Vision vs. image tool:** if you drop a screenshot and ask darkcode to *read* it or *act on what it
-shows* ("what is this", "build this UI", "fix this bug"), it just **looks** (vision) - no image is made.
-It only calls the image tool when you actually want an image *out* (generate / edit / pose / inpaint).
+shows* ("what is this", "build this UI", "fix this bug"), Mr.President just **looks** (vision, via the
+gateway) - no image is made. It only calls the image tool when you actually want an image *out*
+(generate / edit / pose / inpaint).
 
 Results save as PNG in your workspace. The first image call asks a one-time permission. See
 [docs/images.md](docs/images.md).
@@ -237,7 +246,7 @@ Results save as PNG in your workspace. The first image call asks a one-time perm
 | Command | Does |
 |---|---|
 | `/login` · `/logout` | Browser sign-in (in-page user/pass → token) · sign out |
-| `/model` | Pick the model lane (currently Mr. President 1.1) |
+| `/model` | Pick the model lane (Mr.President Lv.284 / Mr.Agent Lv.35) |
 | `/effort` | Pick the tier - low / med / high / ultra |
 | `/init` | Investigate the repo and write a compact `AGENTS.md` (shows just `/init`, not the prompt) |
 | `/review [target]` | Review changes (uncommitted / commit / branch / PR) |
@@ -249,7 +258,7 @@ A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 
 ```
 ▛▀▀▀▜  darkcode
-▌▪ ▪▐  Mr. President 1.1 · med  dark-llm
+▌▪ ▪▐  Mr.President Lv.284 · med  dark-llm
 ▌ ▬ ▐  ~/code/project
 ▙▄▄▄▟
 
@@ -260,7 +269,7 @@ A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
 ────────────────────────────────────────────
   › <your next prompt>
 ────────────────────────────────────────────
-  Mr. President 1.1 · med  dark-llm    tab agents  ctrl+p commands
+  Mr.President Lv.284 · med  dark-llm    tab agents  ctrl+p commands
 ```
 
 - **Scrolling mascot header** - pixel face + model + cwd, scrolls with the chat (not pinned).
@@ -283,7 +292,7 @@ This is the point of the fork - darkcode only ever talks to one provider. Three 
 2. **Provider hard-lock** - `config.ts` forces `enabled_providers = ["dark-llm"]` after all config
    merges, so opencode / openai / anthropic never appear regardless of user config.
 3. **Built-in provider** - `builtin-provider.ts` bakes in the `dark-llm` provider with zero config:
-   base URL, the lanes/tiers, and the default `president-high`.
+   base URL, the lanes/tiers, and the default `mr-president-2-0-high`.
 
 ## Requirements
 

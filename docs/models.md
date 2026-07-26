@@ -6,34 +6,43 @@ the self-hosted [Dark-LLM](https://dark-llm.cropbinary.com) gateway. No other pr
 `["dark-llm"]` after all config is merged, so a fresh install lists and uses only these
 models.
 
-The provider exposes **1 chat lane** across **4 effort tiers**. A chat model id is always
-`<family>-<tier>` (for example `president-high`). The default model is `dark-llm/president-high`.
-The lane's display name is loaded **live from the gateway** (`GET /v1/models` + `/model/info`) and
-is never hardcoded in the client, so renaming the model on the gateway flows through automatically.
+The provider exposes **2 chat lanes**, each across **4 effort tiers**. A chat model id is always
+`<family>-<tier>` (for example `mr-president-2-0-high`). The default model is
+`dark-llm/mr-president-2-0-high`. Display names AND descriptions are loaded **live from the gateway**
+(`GET /v1/models` + `/model/info`) and are never hardcoded in the client, so renaming or re-pricing a
+model on the gateway flows through automatically.
 
-## The lane
+## The lanes
 
-One native-vLLM lane, vision-capable (reads images directly via its own vision tower).
+Two native-vLLM lanes, both your own uncensored, tool-capable models served on your GPU box.
 
-| Lane | Family (`<family>`) | Backing model | Best for |
-| --- | --- | --- | --- |
-| **Mr. President 1.1** | `president` | your own uncensored model, served natively on the gateway | Coding, tools, complex tasks - the workhorse |
+| Lane | Family (`<family>`) | Backing model | Context | Best for |
+| --- | --- | --- | --- | --- |
+| **Mr.President Lv.284** | `mr-president-2-0` | DeepSeek-V4-Flash | **1M** (1,048,576) | Complex tasks, deep reasoning - the workhorse (default). **Sees images** (below). |
+| **Mr.Agent Lv.35** | `mr-agent-1-0` | SuperQwen-AgentWorld-35B-A3B | **256K** (262,144) | Routine, agentic, tool-heavy work - fast and efficient. |
 
-Every tier gets the full native **262K** context window.
+### Vision (Mr.President sees images)
+
+Mr.President is a text model, but you can attach a screenshot and ask about it and it just works.
+The gateway does the seeing: it quietly forwards the attached image to a dedicated vision model
+(Qwen3-VL) behind the scenes, gets back a description, and feeds that to Mr.President to reason over.
+So there is no separate "vision lane" to switch to - drop the image on Mr.President and it reads it.
+(The old "vision tower / mmproj projector" mechanism is gone; vision is now gateway-side delegation.)
 
 ## The four effort tiers
 
-The tier (`<tier>`) sets the reasoning budget. Every tier gets the full native **262K** context.
+The tier (`<tier>`) sets the reasoning budget. It does not change the context window (each lane keeps
+its full window at every tier - 1M for President, 256K for Agent).
 
-| Tier | Thinking | Context window | Reasoning budget | Notes |
-| --- | --- | --- | --- | --- |
-| `low` | off | 262K | none | Fastest, cleanest output |
-| `med` | on | 262K | small | Small reasoning budget |
-| `high` | on | 262K | large | Large reasoning budget (default) |
-| `ultra` | on | 262K | max | Maximum reasoning budget |
+| Tier | Thinking | Reasoning budget | Notes |
+| --- | --- | --- | --- |
+| `low` | off | none | Fastest, cleanest output |
+| `med` | on | small | Small reasoning budget |
+| `high` | on | large | Large reasoning budget (default) |
+| `ultra` | on | max | Maximum reasoning budget |
 
-For the chat lanes, the `high` and `ultra` tiers are flagged as reasoning models, so their thinking
-streams live above the answer (see [ui.md](ui.md)). `low` runs with thinking off entirely.
+The `high` and `ultra` tiers are flagged as reasoning models, so their thinking streams live above the
+answer (see [ui.md](ui.md)). `low` runs with thinking off entirely.
 
 ## Composing a model id
 
@@ -46,10 +55,11 @@ A lane and a tier compose into one model id:
 So the chat lane models are:
 
 ```
-president-low    president-med    president-high    president-ultra
+mr-president-2-0-low    mr-president-2-0-med    mr-president-2-0-high    mr-president-2-0-ultra
+mr-agent-1-0-low        mr-agent-1-0-med        mr-agent-1-0-high        mr-agent-1-0-ultra
 ```
 
-Fully qualified, the default is `dark-llm/president-high`.
+Fully qualified, the default is `dark-llm/mr-president-2-0-high`.
 
 ## Switching lane and tier
 
@@ -71,14 +81,14 @@ command - `/model` is the single model command, and the hidden `model.list` acti
 ### `/effort` - pick the tier
 
 Opens the effort picker (low / med / high / ultra). It switches only the tier and **keeps
-your current lane** (defaulting to `president` if none is set).
+your current lane** (defaulting to `mr-president-2-0` if none is set).
 
 ```
 /effort
 ```
 
 The header and footer always show the active `<lane> · <tier>` selection
-(for example `Mr. President 1.1 · high · Dark LLM`).
+(for example `Mr.President Lv.284 · high · Dark LLM`).
 
 ## The live model list
 
@@ -107,11 +117,13 @@ response - darkcode **falls back to the static built-in list**, so the picker is
 empty.
 
 The gateway currently serves these lane models (plus non-text models like `z-image` for
-text-to-image and `qwen-image-edit` for image editing); the embedding model `bge-m3-embed`
-is filtered out of the picker:
+text-to-image and `qwen-image-edit` for image editing). The embedding model `bge-m3-embed` and any
+model the gateway flags `hidden` (for example the Qwen3-VL vision model that powers Mr.President's
+image-seeing) are filtered out of the picker:
 
 ```
-president-{low,med,high,ultra}
+mr-president-2-0-{low,med,high,ultra}
+mr-agent-1-0-{low,med,high,ultra}
 ```
 
 To see the live list, sign in first (see [auth.md](auth.md)), then open `/model`.

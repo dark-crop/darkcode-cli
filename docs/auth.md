@@ -115,7 +115,7 @@ points relevant to auth:
 | Display name | `Dark LLM` |
 | Base URL | `https://dark-llm.cropbinary.com/v1` |
 | Credential env var | `DARK_LLM_KEY` |
-| Default model | `dark-llm/president-high` |
+| Default model | `dark-llm/mr-president-2-0-high` |
 
 The provider is defined in `packages/opencode/src/config/builtin-provider.ts` and is
 always autoloaded. darkcode is **hard-locked** to this single provider, so no other

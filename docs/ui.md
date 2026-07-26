@@ -55,7 +55,7 @@ The conversation lives inside a single scrollbox. Reading top to bottom:
 
 ```
 ▛▀▀▀▜  darkcode v0.x.x
-▌▪ ▪▐  Mr. President 1.1 · high  dark-llm
+▌▪ ▪▐  Mr.President Lv.284 · high  dark-llm
 ▌ ▬ ▐  ~/code/project
 ▙▄▄▄▟
 
@@ -66,7 +66,7 @@ The conversation lives inside a single scrollbox. Reading top to bottom:
 ────────────────────────────────────────────────────────
   › <your next prompt>
 ────────────────────────────────────────────────────────
-  Mr. President 1.1 · high  dark-llm    tab agents  ctrl+p commands
+  Mr.President Lv.284 · high  dark-llm    tab agents  ctrl+p commands
 ```
 
 There is no sidebar. Context-window usage moved to the `/context` command.
@@ -81,7 +81,7 @@ model and provider, and the working directory.
 
 ```
 ▛▀▀▀▜  darkcode v0.x.x
-▌▪ ▪▐  Mr. President 1.1 · high  dark-llm
+▌▪ ▪▐  Mr.President Lv.284 · high  dark-llm
 ▌ ▬ ▐
 ▙▄▄▄▟  ~/code/project
 ```
@@ -110,7 +110,7 @@ never shows example text like "Ask anything".
 Directly below the input's bottom divider is a full-width footer row:
 
 - **Left (idle):** the current agent, model, and provider, for example
-  `Mr. President 1.1 · high  dark-llm`.
+  `Mr.President Lv.284 · high  dark-llm`.
 - **Right:** key hints - `tab agents` and `ctrl+p commands` (the shortcuts are
   resolved from your keybinds, so they show whatever you have bound). In shell
   mode the right side switches to `esc exit shell mode`.

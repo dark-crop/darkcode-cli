@@ -29,7 +29,7 @@ The dialog is titled **Context Usage** and has four parts.
 The current model and provider, plus the context window size when known:
 
 ```
-president-high   dark-llm   · 262K context
+mr-president-2-0-high   dark-llm   · 1M context
 ```
 
 - The model id and provider name come from the currently selected model
@@ -112,7 +112,9 @@ sending more.
 ## Notes
 
 - The context limit is per-model. Switching lanes or effort tiers with `/model`
-  and `/effort` can change the window and therefore the percentages.
+  and `/effort` can change the window and therefore the percentages - for example
+  Mr.President (`mr-president-2-0-*`, 1M) and Mr.Agent (`mr-agent-1-0-*`, 256K)
+  have different windows.
 - All colors are theme tokens, so the dialog reads correctly in both the dark and
   light `darkcode` themes.
 
