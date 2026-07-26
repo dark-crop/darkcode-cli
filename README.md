@@ -18,7 +18,7 @@
 
 <p align="center">
   <a href="#the-unlock">The unlock</a> ·
-  <a href="#quick-start">Quick start</a> ·
+  <a href="#install">Install</a> ·
   <a href="#models">Models</a> ·
   <a href="#browser">Browser</a> ·
   <a href="#images">Images</a> ·
@@ -150,7 +150,7 @@ cd ~/my-project && darkcode
 > *your* cwd as the project. Running the entry file directly fails with `Cannot find module
 > 'react/jsx-dev-runtime'`. Always start through the launcher. See [docs/install.md](docs/install.md).
 
-## Quick start
+### First run
 
 ```bash
 darkcode                      # 1. start the TUI
@@ -251,37 +251,6 @@ Results save as PNG in your workspace. The first image call asks a one-time perm
 | `/init` | Investigate the repo and write a compact `AGENTS.md` (shows just `/init`, not the prompt) |
 | `/review [target]` | Review changes (uncommitted / commit / branch / PR) |
 | `/context` | Context-window usage: segmented bar, token breakdown, cost |
-
-## The interface
-
-A stripped-down, Claude Code-style TUI - everything inside one scrollbox:
-
-```
-▛▀▀▀▜  darkcode
-▌▪ ▪▐  Mr.President Lv.284 · med  dark-llm
-▌ ▬ ▐  ~/code/project
-▙▄▄▄▟
-
-  › how do I ...                       (your messages + the model's answers)
-
-  ▓ You wish I was faster  (12s · ↓ 1.2k)   ← one live working row
-
-────────────────────────────────────────────
-  › <your next prompt>
-────────────────────────────────────────────
-  Mr.President Lv.284 · med  dark-llm    tab agents  ctrl+p commands
-```
-
-- **Scrolling mascot header** - pixel face + model + cwd, scrolls with the chat (not pinned).
-- **Clean input** - full-width dividers frame a `›` indicator; no shaded box, no placeholder.
-- **One live "working" verb** - a block spinner + a rotating, faintly sassy verb + `(elapsed · ↓ tokens)`.
-- **Live reasoning** - thinking streams *above* the answer as the model works (click to expand the last
-  12 lines); each finished turn closes with a muted `* <sassy sign-off> (<total time>)` line.
-- **Live tools** - a running `write` shows the file streaming in as a green diff; shell output streams in
-  and collapses to a single line (click to expand). No mid-token flicker.
-
-The whole app is themed from one accent (`#a855f7` dark, `#7c3aed` light) defined once in
-`packages/tui/src/theme/assets/darkcode.json`. See [docs/ui.md](docs/ui.md).
 
 ## The lock
 
