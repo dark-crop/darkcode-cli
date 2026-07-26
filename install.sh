@@ -27,8 +27,10 @@ die()   { printf "${RED}darkcode install: %s${R}\n" "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
 banner() {
-  printf "\n${P}${B}  darkcode${R} ${DIM}installer${R}\n"
-  printf "${DIM}  a terminal coding agent wired to your own private LLM${R}\n\n"
+  printf "\n"
+  printf "  ${P}${B}\xe2\x96\x9b\xe2\x96\x80\xe2\x96\x80\xe2\x96\x80\xe2\x96\x9c${R}  ${P}${B}darkcode${R} ${DIM}installer${R}\n"
+  printf "  ${P}${B}\xe2\x96\x8c\xe2\x96\xaa \xe2\x96\xaa\xe2\x96\x90${R}  ${DIM}a terminal coding agent wired to your own private LLM${R}\n"
+  printf "  ${P}${B}\xe2\x96\x99\xe2\x96\x84\xe2\x96\x84\xe2\x96\x84\xe2\x96\x9f${R}\n\n"
 }
 
 # ---- preflight health check -------------------------------------------------------------------
@@ -160,31 +162,28 @@ do_uninstall() {
   printf "${DIM}  Your sign-in/config in ~/.config/darkcode was kept. Delete it too if you like.${R}\n\n"
 }
 
-# ---- interactive menu (arrow keys + number shortcuts, read from /dev/tty) ----------------------
+# ---- interactive menu (simple numbered prompt, read from /dev/tty) -----------------------------
+# Deliberately NOT a raw-mode arrow-key menu: that needs `read -t <frac>` + cursor math, which breaks
+# on macOS's bash 3.2 ("invalid timeout specification") and glitches the redraw. A numbered prompt is
+# bulletproof across every shell and reads cleanly from /dev/tty under `curl | bash`.
 menu() {
-  local items=("Install darkcode" "Update darkcode" "Uninstall darkcode" "Quit")
-  local acts=(install update uninstall quit)
-  local sel=0 key n
-  [ -d "$INSTALL_DIR/.git" ] && sel=1     # already installed -> start on Update
-  printf '  Use %barrow keys%b or %b1-4%b, then Enter:\n\n' "${DIM}" "${R}" "${DIM}" "${R}" > /dev/tty
-  have tput && tput civis >/dev/tty 2>/dev/null || true
-  _draw() { local i; for i in "${!items[@]}"; do
-      if [ "$i" -eq "$sel" ]; then printf '   %b> %s%b\n' "${P}${B}" "${items[$i]}" "${R}" > /dev/tty
-      else printf '     %s\n' "${items[$i]}" > /dev/tty; fi; done; }
-  _draw
-  while IFS= read -rsn1 key < /dev/tty; do
-    case "$key" in
-      $'\033') read -rsn2 -t 0.3 key < /dev/tty || true
-               case "$key" in '[A') sel=$(((sel-1+${#items[@]})%${#items[@]}));; '[B') sel=$(((sel+1)%${#items[@]}));; esac ;;
-      ''|$'\n') break ;;
-      [1-4]) n=$((key-1)); sel=$n; break ;;
-      q|Q) sel=3; break ;;
-    esac
-    printf '\033[%dA' "${#items[@]}" > /dev/tty; _draw
-  done
-  have tput && tput cnorm >/dev/tty 2>/dev/null || true
+  local def="1"; [ -d "$INSTALL_DIR/.git" ] && def="2"    # already installed -> default to Update
+  {
+    printf '  %b1%b  Install    %bset up darkcode + Bun, link it onto your PATH%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
+    printf '  %b2%b  Update     %bpull the latest darkcode into your existing install%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
+    printf '  %b3%b  Uninstall  %bremove darkcode (keeps your login + Bun)%b\n' "${P}${B}" "${R}" "${DIM}" "${R}"
+    printf '  %b4%b  Quit%b\n\n' "${P}${B}" "${R}" "${DIM}" "${R}"
+    printf '  Choose %b[1-4]%b (default %b%s%b): ' "${DIM}" "${R}" "${P}${B}" "$def" "${R}"
+  } > /dev/tty
+  local n=""; read -r n < /dev/tty || n="4"
+  [ -z "$n" ] && n="$def"
   printf '\n' > /dev/tty
-  printf '%s' "${acts[$sel]}"
+  case "$n" in
+    1|i|install)   printf 'install' ;;
+    2|u|update)    printf 'update' ;;
+    3|uninstall|remove) printf 'uninstall' ;;
+    *)             printf 'quit' ;;
+  esac
 }
 
 # ---- dispatch ---------------------------------------------------------------------------------
