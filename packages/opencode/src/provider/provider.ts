@@ -1647,7 +1647,10 @@ const layer = Layer.effect(
                 // client: the brand name lives only on the gateway (litellm model_info.display_name)
                 // and clients render whatever it returns. Best-effort - falls back to a generic
                 // id-derived label (darkLlmDisplayName) if /model/info is unreachable.
-                const meta = new Map<string, { name?: string; effort?: string; context?: number; description?: string }>()
+                const meta = new Map<
+                  string,
+                  { name?: string; effort?: string; context?: number; description?: string; vision?: boolean }
+                >()
                 try {
                   const root = base.replace(/\/v1$/, "")
                   const ctrl2 = new AbortController()
@@ -1666,6 +1669,7 @@ const layer = Layer.effect(
                           effort?: string
                           context_length?: number
                           description?: string
+                          supports_vision?: boolean
                         }
                       }>
                     }
@@ -1676,6 +1680,7 @@ const layer = Layer.effect(
                         effort: m.model_info?.effort,
                         context: m.model_info?.context_length,
                         description: m.model_info?.description,
+                        vision: m.model_info?.supports_vision === true,
                       })
                     }
                   }
@@ -1710,6 +1715,13 @@ const layer = Layer.effect(
                   // Gateway-owned lane description (litellm model_info.description). The picker
                   // renders this verbatim, so re-copy flows through with zero client changes.
                   if (mm?.description) (models[id] as any).description = mm.description
+                  // Vision is gateway-owned too (model_info.supports_vision): only vision lanes accept
+                  // image attachments. The chat lanes are text-only vLLM now (no mmproj), so marking
+                  // them attachment:false stops the UI from sending images the model rejects
+                  // ("... is not a multimodal model"). Default to text-only when the gateway is silent.
+                  const vision = mm?.vision === true
+                  models[id].attachment = vision
+                  models[id].modalities = { input: vision ? ["text", "image"] : ["text"], output: ["text"] }
                 }
               } catch {}
             })

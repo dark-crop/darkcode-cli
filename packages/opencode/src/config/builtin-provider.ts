@@ -40,13 +40,15 @@ function textModel(name: string, family: string, tier: (typeof TIERS)[number], r
     name,
     family,
     release_date: RELEASE_DATE,
-    // The chat lanes are vision-capable (llama.cpp mmproj projector), so they accept images.
-    attachment: true,
+    // OFFLINE fallback shape only. The chat lanes are text-only vLLM now (no mmproj projector), so
+    // no image attachments. Online, the live reconcile sets attachment/modalities per lane from the
+    // gateway's model_info.supports_vision (vision lanes accept images; chat lanes do not).
+    attachment: false,
     reasoning,
     temperature: true,
     tool_call: true,
     limit: { context: tier.context, output: tier.output },
-    modalities: { input: ["text", "image"], output: ["text"] },
+    modalities: { input: ["text"], output: ["text"] },
   }
 }
 
