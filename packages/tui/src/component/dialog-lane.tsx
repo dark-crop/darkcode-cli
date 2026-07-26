@@ -25,7 +25,9 @@ export function DialogLane() {
       value: lane.family,
       title: lane.label,
       // Render the description inline (muted) on the SAME line as the name, not on a line below.
-      label: lane.description,
+      // DialogSelect's Option renders `description` as a muted span right after the title; `details`
+      // would instead drop it onto a separate line below, which is not what we want here.
+      description: lane.description,
       onSelect: () => {
         dialog.clear()
         local.model.set(composeDarkLlmModel(lane.family, parsed()?.tier ?? "high"), { recent: true })
