@@ -92,6 +92,15 @@ darkcode_maybe_update() {
 darkcode_update_notice
 darkcode_maybe_update
 
+# Stamp the install's git short-hash into DARKCODE_VERSION so `darkcode --version` reports something
+# checkable against origin/master instead of the bare "local" (darkcode runs from source, so upstream's
+# build-time version define is never set). Respect an explicit DARKCODE_VERSION if the user set one.
+if [ -z "${DARKCODE_VERSION:-}" ] && command -v git >/dev/null 2>&1; then
+  _dc_hash="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+  [ -n "$_dc_hash" ] && export DARKCODE_VERSION="$_dc_hash"
+  unset _dc_hash
+fi
+
 preload="$(cd "$OC" && bun -e 'process.stdout.write(import.meta.resolveSync("@opentui/solid/preload"))' 2>/dev/null || true)"
 if [ -z "$preload" ]; then
   echo "darkcode: could not resolve @opentui/solid/preload (is 'bun install' complete?)." >&2
