@@ -4,6 +4,7 @@ import { useSync } from "../../context/sync"
 import { useTheme } from "../../context/theme"
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import { Locale } from "../../util/locale"
+import { DARK_LLM_PROVIDER_ID } from "../../util/dark-llm"
 
 /** Claude-style agent panel: a persistent footer list of the main session plus every subagent,
  * each with live elapsed time and streamed output tokens. The active session is marked, and
@@ -56,6 +57,16 @@ export function AgentPanel() {
     return { elapsed, tokens: out > 0 ? `↓ ${tk} tokens` : undefined }
   }
 
+  // The lane a subagent is actually running on (so you can confirm fan-out downshifted to Mr.Agent).
+  // Read from its first assistant message's modelID, resolved to the gateway display name (tier stripped).
+  function modelOf(id: string) {
+    const modelID = (sync.data.message[id] ?? []).find((m) => m.role === "assistant")?.modelID
+    if (!modelID) return undefined
+    const provider = sync.data.provider.find((p) => p.id === DARK_LLM_PROVIDER_ID)
+    const name = provider?.models[modelID]?.name
+    return (name ?? modelID).replace(/\s*·\s*(low|med|high|ultra)\s*$/i, "").replace(/-(low|med|high|ultra)$/, "")
+  }
+
   return (
     <Show when={visible()}>
       <box flexShrink={0} paddingTop={1} paddingLeft={2} paddingRight={2}>
@@ -93,7 +104,7 @@ export function AgentPanel() {
                 </box>
                 <Show when={!isMain}>
                   <text fg={theme.textMuted} wrapMode="none">
-                    {[st().elapsed, st().tokens].filter(Boolean).join(" · ")}
+                    {[modelOf(s.id), st().elapsed, st().tokens].filter(Boolean).join(" · ")}
                   </text>
                 </Show>
               </box>
