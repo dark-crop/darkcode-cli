@@ -222,7 +222,12 @@ export function Session() {
       const agent = match ? match[1] : "subagent"
       const task = s.title.replace(/\s*\(@\w+ subagent\)\s*$/, "").trim()
       const running = sync.data.session_status[s.id]?.type === "busy"
-      return { id: s.id, title: task || agent, description: running ? `@${agent} · running` : `@${agent}` }
+      // A spawned subagent that is no longer busy has finished - surface it as "done" (green in the panel).
+      return {
+        id: s.id,
+        title: task || agent,
+        description: running ? `@${agent} · running` : `@${agent} · done`,
+      }
     })
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
@@ -2403,6 +2408,7 @@ function Task(props: ToolProps) {
   return (
     <InlineTool
       icon={props.part.state.status === "completed" ? "✓" : "│"}
+      iconColor={props.part.state.status === "completed" ? theme.success : undefined}
       separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}

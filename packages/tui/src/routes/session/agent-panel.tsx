@@ -66,7 +66,10 @@ export function AgentPanel() {
     const secs = Math.max(0, Math.floor((end - start) / 1000))
     const elapsed = secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`
     const tk = out >= 1000 ? (out / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(out)
-    return { elapsed, tokens: out > 0 ? `↓ ${tk} tokens` : undefined }
+    // A subagent is "done" once it stopped running and produced at least one completed reply -
+    // its dot goes green (like Claude's finished-agent panel).
+    const done = !busy && lastEnd > 0
+    return { elapsed, tokens: out > 0 ? `↓ ${tk} tokens` : undefined, busy, done }
   }
 
   // The lane a subagent is actually running on (so you can confirm fan-out downshifted to Mr.Agent).
@@ -89,6 +92,13 @@ export function AgentPanel() {
             const agent = s.title.match(/@(\w+) subagent/)?.[1] ?? "agent"
             const task = s.title.replace(/\s*\(@\w+ subagent\)\s*$/, "").trim()
             const st = createMemo(() => stat(s.id))
+            // Dot: a running subagent is primary, a FINISHED one is green (Claude-style), otherwise
+            // it follows the active/muted convention. The main row never goes green (it's the live session).
+            const dotColor = createMemo(() => {
+              if (st().busy) return theme.primary
+              if (!isMain && st().done) return theme.success
+              return active() ? theme.primary : theme.textMuted
+            })
             return (
               <box
                 flexDirection="row"
@@ -97,7 +107,7 @@ export function AgentPanel() {
                 onMouseUp={() => navigate({ type: "session", sessionID: s.id })}
               >
                 <box flexDirection="row" gap={1}>
-                  <text fg={active() ? theme.primary : theme.textMuted}>{active() ? "●" : "○"}</text>
+                  <text fg={dotColor()}>{active() ? "●" : "○"}</text>
                   <Show
                     when={!isMain}
                     fallback={
