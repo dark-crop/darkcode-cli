@@ -1368,6 +1368,17 @@ export function Prompt(props: PromptProps) {
   const maxHeight = createMemo(() => tuiConfig.prompt?.max_height ?? Math.max(6, Math.floor(dimensions().height / 3)))
   const moveLabelWidth = createMemo(() => Math.max(12, Math.min(44, dimensions().width - 48)))
 
+  // The footer row (below the mode line) only has something to say in shell mode, during a retry,
+  // while a workspace/move op is pending, or when an editor context / hint is present. In plain
+  // normal-idle it's empty, so we hide it entirely to avoid an empty line under the mode indicator.
+  const footerHasContent = createMemo(() => {
+    if (store.mode === "shell") return true
+    if (status().type === "retry") return true
+    if (workspace.notice() || workspace.label() || move.progress() || move.pendingNew()) return true
+    if (editorContextLabelState() !== "none" && editorFileLabelDisplay()) return true
+    return props.hint != null
+  })
+
   return (
     <>
       <box ref={(r: BoxRenderable) => (anchor = r)} visible={props.visible !== false} width="100%">
@@ -1485,8 +1496,10 @@ export function Prompt(props: PromptProps) {
             </Show>
           </box>
         </Show>
-        {/* Footer section: the model is intentionally NOT shown here (it lives in the start header and
-            the /model picker). Left side is empty; key hints + cwd render on the right. */}
+        {/* Footer section: shell/retry/workspace state on the left, editor context on the right. The
+            model + token usage are NOT here (usage lives on the mode line above). Hidden entirely when
+            there's nothing to show, so normal-idle collapses to just the single mode-indicator line. */}
+        <Show when={footerHasContent()}>
         <box width="100%" flexDirection="row" justifyContent="space-between" paddingLeft={2} paddingRight={2}>
           <Switch>
             <Match when={status().type !== "idle"}>
@@ -1628,6 +1641,7 @@ export function Prompt(props: PromptProps) {
             </box>
           </Show>
         </box>
+        </Show>
       </box>
       <Autocomplete
         sessionID={props.sessionID}
