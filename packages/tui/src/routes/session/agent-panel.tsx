@@ -27,25 +27,20 @@ export function AgentPanel() {
       .filter((x) => x.id === main || x.parentID === main)
       .toSorted((a, b) => a.time.created - b.time.created)
   })
-  // Only show THIS turn's subagents (created after the last user message on main), so a finished
-  // fan-out doesn't linger like a cache when you send the next prompt. When viewing a subagent, show
-  // all of them so you can still navigate between them.
-  const lastTurnStart = createMemo(() => {
-    const main = mainID()
-    if (!main) return 0
-    const msgs = sync.data.message[main] ?? []
-    for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i].role === "user") return msgs[i].time?.created ?? 0
-    return 0
-  })
+  // Show the main plus up to CAP subagents (8 rows total); older ones collapse behind a "+N" line so
+  // the footer never grows unbounded. It hides once nothing is running - anyBusy checks the SUBS (not
+  // the main session), so a finished fan-out doesn't linger when you send the next prompt. Viewing a
+  // subagent keeps it up so you can navigate between them.
+  const CAP = 7
   const viewingSub = createMemo(() => !!current()?.parentID)
-  const subs = createMemo(() =>
-    rows().filter((x) => x.id !== mainID() && (viewingSub() || x.time.created >= lastTurnStart())),
-  )
+  const subs = createMemo(() => rows().filter((x) => x.id !== mainID()))
   const anyBusy = createMemo(() => subs().some((x) => sync.data.session_status[x.id]?.type === "busy"))
   const visible = createMemo(() => subs().length > 0 && (anyBusy() || viewingSub()))
+  const hidden = createMemo(() => Math.max(0, subs().length - CAP))
   const displayRows = createMemo(() => {
     const main = rows().find((x) => x.id === mainID())
-    return main ? [main, ...subs()] : subs()
+    const shown = subs().slice(0, CAP)
+    return main ? [main, ...shown] : shown
   })
 
   const [now, setNow] = createSignal(Date.now())
@@ -128,6 +123,13 @@ export function AgentPanel() {
             )
           }}
         </For>
+        <Show when={hidden() > 0}>
+          <box flexDirection="row" gap={1} paddingLeft={2}>
+            <text fg={theme.textMuted}>
+              … +{hidden()} more agent{hidden() > 1 ? "s" : ""}
+            </text>
+          </box>
+        </Show>
       </box>
     </Show>
   )

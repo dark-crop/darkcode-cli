@@ -161,6 +161,13 @@ export function Prompt(props: PromptProps) {
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  // Number of subagents currently running under this session (shown in the footer mode line).
+  const runningAgents = createMemo(() => {
+    const sid = props.sessionID
+    if (!sid) return 0
+    return sync.data.session.filter((s) => s.parentID === sid && sync.data.session_status[s.id]?.type === "busy")
+      .length
+  })
   const history = usePromptHistory()
   const stash = usePromptStash()
   const keymap = useOpencodeKeymap()
@@ -1449,13 +1456,24 @@ export function Prompt(props: PromptProps) {
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
         {/* Interaction-mode indicator (Claude-style): its own line under the input, coloured per mode,
             with the pause/fast-forward glyph. Tab / Shift+Tab cycle manual -> accept edits -> plan -> auto. */}
-        <Show when={status().type === "idle" && store.mode === "normal"}>
+        <Show when={store.mode === "normal"}>
           <box width="100%" paddingLeft={2} paddingRight={2}>
             <text wrapMode="none">
               <span style={{ fg: theme[PERMISSION_MODE_META[local.permission.mode].color], bold: true }}>
                 {PERMISSION_MODE_META[local.permission.mode].icon} {PERMISSION_MODE_META[local.permission.mode].label}
               </span>
               <span style={{ fg: theme.textMuted }}> (tab to cycle)</span>
+              {status().type !== "idle" ? (
+                <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
+                  {store.interrupt > 0 ? " · esc again to interrupt" : " · esc to interrupt"}
+                </span>
+              ) : null}
+              {runningAgents() > 0 ? (
+                <span style={{ fg: theme.textMuted }}>
+                  {" · ← "}
+                  {runningAgents()} agent{runningAgents() > 1 ? "s" : ""}
+                </span>
+              ) : null}
             </text>
           </box>
         </Show>
@@ -1530,12 +1548,6 @@ export function Prompt(props: PromptProps) {
                     })()}
                   </box>
                 </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
-                  esc{" "}
-                  <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
-                    {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
-                  </span>
-                </text>
               </box>
             </Match>
             <Match when={workspace.notice()}>
@@ -1588,22 +1600,7 @@ export function Prompt(props: PromptProps) {
                 <text fg={theme.accent}>(new working copy)</text>
               </box>
             </Match>
-            <Match when={true}>
-              {props.hint ?? (
-                <Show when={props.sessionID}>
-                  <box marginLeft={1}>
-                    <text fg={theme.textMuted}>
-                      {(() => {
-                        // Show a shortened cwd: ".../<last two segments>" (e.g. .../projects/test).
-                        const dir = location()?.directory ?? paths.cwd
-                        const parts = dir.split("/").filter(Boolean)
-                        return parts.length > 2 ? ".../" + parts.slice(-2).join("/") : dir
-                      })()}
-                    </text>
-                  </box>
-                </Show>
-              )}
-            </Match>
+            <Match when={true}>{props.hint ?? null}</Match>
           </Switch>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
