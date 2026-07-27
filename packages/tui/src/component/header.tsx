@@ -32,20 +32,18 @@ export function Header() {
       title={version() ? `darkcode ${version()}` : "darkcode"}
       titleColor={theme.primary}
       titleAlignment="left"
-      paddingTop={1}
-      paddingBottom={1}
       paddingLeft={2}
       paddingRight={2}
       marginTop={1}
       marginBottom={1}
     >
-      {/* Left: welcome + mascot + model / provider / cwd, centered */}
-      <box flexGrow={1} flexBasis={0} alignItems="center" gap={1}>
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>
-          Welcome back!
-        </text>
+      {/* Left: mascot beside welcome + model / provider / cwd (compact row) */}
+      <box flexGrow={1} flexBasis={0} flexDirection="row" gap={2} alignItems="center">
         <Mascot mini />
-        <box alignItems="center">
+        <box justifyContent="center">
+          <text fg={theme.text} attributes={TextAttributes.BOLD}>
+            Welcome back!
+          </text>
           <text>
             <span style={{ fg: theme.text }}>{model().model}</span>
             {tier() ? <span style={{ fg: theme.textMuted }}> · {tier()}</span> : null}
