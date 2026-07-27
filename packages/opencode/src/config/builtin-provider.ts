@@ -9,7 +9,7 @@ import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
  */
 export const DARK_LLM_PROVIDER_ID = "dark-llm"
 export const DARK_LLM_BASE_URL = "https://dark-llm.cropbinary.com/v1"
-export const DARK_LLM_DEFAULT_MODEL_ID = "mr-president-2-0-high"
+export const DARK_LLM_DEFAULT_MODEL_ID = "mr-president-2-0-med"
 export const DARK_LLM_ENV_KEY = "DARK_LLM_KEY"
 
 type BuiltinModel = NonNullable<ConfigV1.Info["provider"]>[string]["models"] extends infer M
@@ -85,7 +85,7 @@ export function darkLlmModels(): Record<string, BuiltinModel> {
 
 /**
  * OFFLINE-fallback display for a gateway model id, derived purely from the id
- * (e.g. "president-med" -> "President · med"). No brand name is hardcoded here -
+ * (e.g. "mr-president-2-0-med" -> "Mr president 2 0 · med"). No brand name is hardcoded here -
  * online, the real display name comes from the gateway's /model/info `display_name`
  * (see the live reconcile in provider.ts), so renaming only ever touches the gateway.
  */
