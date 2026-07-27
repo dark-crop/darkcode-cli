@@ -3,7 +3,6 @@ import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
 import { useLocal } from "../context/local"
 import { useDirectory } from "../context/directory"
-import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Mascot } from "./mascot"
 
 /**
@@ -17,10 +16,6 @@ export function Header() {
   const directory = useDirectory()
   const model = createMemo(() => local.model.parsed())
   const tier = createMemo(() => local.model.variant.current())
-  const version = createMemo(() => {
-    const v = InstallationVersion
-    return v && v !== "local" && v !== "dev" && v !== "0.0.0" ? `v${v}` : undefined
-  })
 
   return (
     <box
@@ -29,9 +24,6 @@ export function Header() {
       border={true}
       borderStyle="rounded"
       borderColor={theme.primary}
-      title={version() ? `darkcode ${version()}` : "darkcode"}
-      titleColor={theme.primary}
-      titleAlignment="left"
       paddingLeft={2}
       paddingRight={2}
       marginTop={1}
