@@ -89,7 +89,7 @@ export function useWorkingVerb() {
     pick()
     const started = Date.now()
     const tick = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000)
-    const rotate = setInterval(pick, 12000)
+    const rotate = setInterval(pick, 120000) // hold each verb ~2 min before switching
     onCleanup(() => {
       clearInterval(tick)
       clearInterval(rotate)
