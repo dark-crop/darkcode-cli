@@ -111,6 +111,18 @@ wire_path() {
   esac
 }
 
+# Post-action reminder: if $BIN_DIR is already live in THIS shell you're good; otherwise tell the user
+# to source their rc (new terminals are already wired). Shared by both install and update.
+post_path_notice() {
+  local rc; rc="$(rc_file_for_shell)"
+  if on_path "$BIN_DIR" && have bun; then
+    printf "    darkcode --version\n    darkcode            ${DIM}# start the TUI, then /login to sign in${R}\n\n"
+  else
+    printf "One step left - load the new PATH into THIS terminal (new terminals are ready):\n\n"
+    printf "    source %s\n\n    darkcode --version\n    darkcode            ${DIM}# then /login${R}\n\n" "$rc"
+  fi
+}
+
 # ---- actions ----------------------------------------------------------------------------------
 do_install() {
   health_check
@@ -137,13 +149,7 @@ do_install() {
   wire_path
 
   printf "\n${P}${B}darkcode installed.${R}\n\n"
-  local rc; rc="$(rc_file_for_shell)"
-  if on_path "$BIN_DIR" && have bun; then
-    printf "    darkcode --version\n    darkcode            ${DIM}# start the TUI, then /login to sign in${R}\n\n"
-  else
-    printf "One step left - load the new PATH into THIS terminal (new terminals are ready):\n\n"
-    printf "    source %s\n\n    darkcode --version\n    darkcode            ${DIM}# then /login${R}\n\n" "$rc"
-  fi
+  post_path_notice
 }
 
 do_update() {
@@ -156,8 +162,14 @@ do_update() {
   info "Installing dependencies (bun install)..."
   ( cd "$INSTALL_DIR" && bun install --silent )
   chmod +x "$INSTALL_DIR/darkcode"
+  # Re-link AND re-wire PATH: a user who only ever runs Update (or whose first install predated the
+  # PATH line) otherwise ends up with a working symlink that isn't on PATH -> `command not found` on
+  # every new shell. wire_path is idempotent (skips if its marker is already in the rc file).
+  mkdir -p "$BIN_DIR"
   ln -sf "$INSTALL_DIR/darkcode" "$BIN_DIR/darkcode"
+  wire_path
   printf "\n${P}${B}darkcode updated${R} to %s.\n\n" "$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo latest)"
+  post_path_notice
 }
 
 do_uninstall() {
