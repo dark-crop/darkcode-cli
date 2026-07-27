@@ -5,18 +5,24 @@
 #   curl -fsSL https://dark-llm.cropbinary.com/install.sh | bash -s -- install
 #   DARKCODE_ACTION=uninstall bash install.sh
 #
-# In a terminal it shows a menu (Install / Update / Uninstall). Piped non-interactively (CI, Docker)
-# it defaults to Install/Update so the classic one-liner still just works. It installs Bun if missing
-# and links the `darkcode` launcher onto your PATH. No build step.
+# In a terminal it shows a menu (Install / Update / Browser / Uninstall). Piped non-interactively
+# (CI, Docker) it defaults to Install/Update so the classic one-liner still just works. It installs
+# Bun if missing and links the `darkcode` launcher onto your PATH. No build step. "Browser" stages the
+# darkbrowser Chrome extension for a one-time Load-unpacked (Chrome blocks silent extension installs).
 #
-# Env: DARKCODE_ACTION (install|update|uninstall), DARKCODE_REPO, DARKCODE_BRANCH,
-#      DARKCODE_HOME (install dir), DARKCODE_BIN (launcher dir), DARKCODE_NO_PATH=1, DARKCODE_YES=1.
+# Env: DARKCODE_ACTION (install|update|browser|uninstall), DARKCODE_REPO, DARKCODE_BRANCH,
+#      DARKCODE_HOME (install dir), DARKCODE_BIN (launcher dir), DARKCODE_NO_PATH=1, DARKCODE_YES=1,
+#      DARKBROWSER_REPO, DARKBROWSER_BRANCH, DARKBROWSER_HOME (darkbrowser clone dir).
 set -euo pipefail
 
 REPO="${DARKCODE_REPO:-https://github.com/dark-crop/darkcode-cli.git}"
 BRANCH="${DARKCODE_BRANCH:-master}"
 INSTALL_DIR="${DARKCODE_HOME:-$HOME/.darkcode}"
 BIN_DIR="${DARKCODE_BIN:-$HOME/.local/bin}"
+# darkbrowser (the Chrome side-panel agent) is a separate PUBLIC repo, staged for a manual Load-unpacked.
+BROWSER_REPO="${DARKBROWSER_REPO:-https://github.com/dark-crop/darkbrowser-chrome.git}"
+BROWSER_BRANCH="${DARKBROWSER_BRANCH:-master}"
+BROWSER_DIR="${DARKBROWSER_HOME:-$HOME/.darkbrowser}"
 
 P='\033[35m'; B='\033[1m'; DIM='\033[2m'; RED='\033[31m'; GRN='\033[32m'; YLW='\033[33m'; R='\033[0m'
 info()  { printf "${P}*${R} %s\n" "$*"; }
@@ -192,6 +198,37 @@ do_uninstall() {
   printf "${DIM}  Your sign-in/config in ~/.config/darkcode was kept. Delete it too if you like.${R}\n\n"
 }
 
+# Install/update the darkbrowser Chrome extension SOURCE. Chrome has NO supported way for a script to
+# load an unpacked extension into a running browser (that is deliberately blocked - it is what malware
+# does), so this stages the files and shrinks the manual part to ~2 clicks: it copies the folder path
+# to the clipboard and opens chrome://extensions; you flip Developer mode + Load unpacked once. After
+# that, a re-run just fetches latest and you click the card's reload icon.
+do_browser() {
+  if [ -d "$BROWSER_DIR/.git" ]; then
+    info "Updating darkbrowser in $BROWSER_DIR"
+    git -C "$BROWSER_DIR" fetch --depth 1 origin "$BROWSER_BRANCH" -q
+    git -C "$BROWSER_DIR" reset --hard "origin/$BROWSER_BRANCH" -q
+  else
+    info "Cloning darkbrowser into $BROWSER_DIR"
+    rm -rf "$BROWSER_DIR"
+    git clone --depth 1 --branch "$BROWSER_BRANCH" "$BROWSER_REPO" "$BROWSER_DIR" -q
+  fi
+  local head; head="$(git -C "$BROWSER_DIR" rev-parse --short HEAD 2>/dev/null || echo latest)"
+  printf "\n${P}${B}darkbrowser staged${R} at %s (%s).\n\n" "$BROWSER_DIR" "$head"
+
+  if have pbcopy; then printf '%s' "$BROWSER_DIR" | pbcopy 2>/dev/null && ok "folder path copied to your clipboard"; fi
+  printf "  ${B}Chrome won't let a script finish the load - do this one time:${R}\n"
+  printf "    1. Open ${B}chrome://extensions${R}  ${DIM}(turn on Developer mode, top-right)${R}\n"
+  printf "    2. Click ${B}Load unpacked${R} and pick ${B}%s${R}\n" "$BROWSER_DIR"
+  printf "    3. Pin it, open the side panel, sign in with your Dark LLM key\n"
+  printf "  ${DIM}Already loaded it before? Just click the reload icon on the darkbrowser card.${R}\n\n"
+
+  # Best-effort: open the extensions page so step 1 is one keystroke. Never fails the script.
+  if have open; then open -a "Google Chrome" "chrome://extensions/" >/dev/null 2>&1 || true
+  elif have xdg-open; then xdg-open "chrome://extensions/" >/dev/null 2>&1 || true
+  fi
+}
+
 # ---- interactive menu (arrow-key selection, read from /dev/tty) --------------------------------
 # up/down (or j/k) to move, Enter to pick, 1-4 as shortcuts. Reads one raw char at a time from
 # /dev/tty so it works under `curl | bash`. Deliberately NO `read -t <frac>` (that errors on macOS's
@@ -199,18 +236,19 @@ do_uninstall() {
 # bytes, which arrow keys always send. Each redraw clears its lines (\r + CSI-K) so there are no
 # artifacts.
 menu() {
-  local labels=("Install" "Update" "Uninstall" "Quit")
+  local labels=("Install" "Update" "Browser" "Uninstall" "Quit")
   local descs=("set up darkcode + Bun, link it onto your PATH" \
                "pull the latest darkcode into your existing install" \
+               "stage the darkbrowser Chrome extension (then Load unpacked)" \
                "remove darkcode (keeps your login + Bun)" "")
-  local acts=(install update uninstall quit)
-  local count=4 sel=0 key
+  local acts=(install update browser uninstall quit)
+  local count=5 sel=0 key
   [ -d "$INSTALL_DIR/.git" ] && sel=1     # already installed -> start on Update
-  printf '  %bup/down%b to move, %bEnter%b to select (or %b1-4%b):\n\n' "${DIM}" "${R}" "${DIM}" "${R}" "${DIM}" "${R}" > /dev/tty
+  printf '  %bup/down%b to move, %bEnter%b to select (or %b1-5%b):\n\n' "${DIM}" "${R}" "${DIM}" "${R}" "${DIM}" "${R}" > /dev/tty
   printf '\033[?25l' > /dev/tty           # hide cursor
   _draw() {
     local i
-    for i in 0 1 2 3; do
+    for i in 0 1 2 3 4; do
       if [ "$i" -eq "$sel" ]; then
         printf '\r\033[K  %b> %-10s%b %b%s%b\n' "${P}${B}" "${labels[$i]}" "${R}" "${DIM}" "${descs[$i]}" "${R}" > /dev/tty
       else
@@ -226,8 +264,8 @@ menu() {
       k) sel=$(((sel-1+count)%count)) ;;
       j) sel=$(((sel+1)%count)) ;;
       ''|$'\n') break ;;
-      [1-4]) sel=$((key-1)); break ;;
-      q|Q) sel=3; break ;;
+      [1-5]) sel=$((key-1)); break ;;
+      q|Q) sel=4; break ;;
       *) continue ;;
     esac
     printf '\033[%dA' "$count" > /dev/tty
@@ -254,7 +292,8 @@ fi
 case "$ACTION" in
   install)          do_install ;;
   update|upgrade)   do_update ;;
+  browser)          do_browser ;;
   uninstall|remove) do_uninstall ;;
   quit|q)           info "Bye." ;;
-  *)                die "unknown action '$ACTION' (use install | update | uninstall)." ;;
+  *)                die "unknown action '$ACTION' (use install | update | browser | uninstall)." ;;
 esac
