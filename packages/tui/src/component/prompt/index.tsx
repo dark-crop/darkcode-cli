@@ -1455,9 +1455,10 @@ export function Prompt(props: PromptProps) {
         </box>
         <box height={1} width="100%" border={["bottom"]} borderColor={theme.border} />
         {/* Interaction-mode indicator (Claude-style): its own line under the input, coloured per mode,
-            with the pause/fast-forward glyph. Tab / Shift+Tab cycle manual -> accept edits -> plan -> auto. */}
+            with the pause/fast-forward glyph. Tab / Shift+Tab cycle manual -> accept edits -> plan -> auto.
+            The context/token usage sits on the RIGHT of this same line (space-between). */}
         <Show when={store.mode === "normal"}>
-          <box width="100%" paddingLeft={2} paddingRight={2}>
+          <box width="100%" flexDirection="row" justifyContent="space-between" gap={2} paddingLeft={2} paddingRight={2}>
             <text wrapMode="none">
               <span style={{ fg: theme[PERMISSION_MODE_META[local.permission.mode].color], bold: true }}>
                 {PERMISSION_MODE_META[local.permission.mode].icon} {PERMISSION_MODE_META[local.permission.mode].label}
@@ -1475,6 +1476,13 @@ export function Prompt(props: PromptProps) {
                 </span>
               ) : null}
             </text>
+            <Show when={status().type !== "retry" ? usage() : undefined}>
+              {(item) => (
+                <text fg={theme.textMuted} wrapMode="none">
+                  {item().context}
+                </text>
+              )}
+            </Show>
           </box>
         </Show>
         {/* Footer section: the model is intentionally NOT shown here (it lives in the start header and
@@ -1610,22 +1618,13 @@ export function Prompt(props: PromptProps) {
                   <text fg={editorContextLabelState() === "pending" ? theme.secondary : theme.textMuted}>{file()}</text>
                 )}
               </Show>
-              <Switch>
-                <Match when={store.mode === "normal"}>
-                  <Show when={usage()}>
-                    {(item) => (
-                      <text fg={theme.textMuted} wrapMode="none">
-                        {item().context}
-                      </text>
-                    )}
-                  </Show>
-                </Match>
-                <Match when={store.mode === "shell"}>
-                  <text fg={theme.text}>
-                    esc <span style={{ fg: theme.textMuted }}>exit shell mode</span>
-                  </text>
-                </Match>
-              </Switch>
+              {/* Token/context usage moved up to the mode-indicator line (same row, on the right).
+                  Only the shell-mode hint remains here. */}
+              <Show when={store.mode === "shell"}>
+                <text fg={theme.text}>
+                  esc <span style={{ fg: theme.textMuted }}>exit shell mode</span>
+                </text>
+              </Show>
             </box>
           </Show>
         </box>
