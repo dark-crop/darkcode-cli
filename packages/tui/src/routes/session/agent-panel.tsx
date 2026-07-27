@@ -27,9 +27,26 @@ export function AgentPanel() {
       .filter((x) => x.id === main || x.parentID === main)
       .toSorted((a, b) => a.time.created - b.time.created)
   })
-  const subs = createMemo(() => rows().filter((x) => x.id !== mainID()))
-  const anyBusy = createMemo(() => rows().some((x) => sync.data.session_status[x.id]?.type === "busy"))
-  const visible = createMemo(() => subs().length > 0 && (anyBusy() || !!current()?.parentID))
+  // Only show THIS turn's subagents (created after the last user message on main), so a finished
+  // fan-out doesn't linger like a cache when you send the next prompt. When viewing a subagent, show
+  // all of them so you can still navigate between them.
+  const lastTurnStart = createMemo(() => {
+    const main = mainID()
+    if (!main) return 0
+    const msgs = sync.data.message[main] ?? []
+    for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i].role === "user") return msgs[i].time?.created ?? 0
+    return 0
+  })
+  const viewingSub = createMemo(() => !!current()?.parentID)
+  const subs = createMemo(() =>
+    rows().filter((x) => x.id !== mainID() && (viewingSub() || x.time.created >= lastTurnStart())),
+  )
+  const anyBusy = createMemo(() => subs().some((x) => sync.data.session_status[x.id]?.type === "busy"))
+  const visible = createMemo(() => subs().length > 0 && (anyBusy() || viewingSub()))
+  const displayRows = createMemo(() => {
+    const main = rows().find((x) => x.id === mainID())
+    return main ? [main, ...subs()] : subs()
+  })
 
   const [now, setNow] = createSignal(Date.now())
   createEffect(() => {
@@ -70,7 +87,7 @@ export function AgentPanel() {
   return (
     <Show when={visible()}>
       <box flexShrink={0} paddingTop={1} paddingLeft={2} paddingRight={2}>
-        <For each={rows()}>
+        <For each={displayRows()}>
           {(s) => {
             const active = createMemo(() => s.id === route.sessionID)
             const isMain = s.id === mainID()
