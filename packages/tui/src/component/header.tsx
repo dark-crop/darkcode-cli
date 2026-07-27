@@ -3,6 +3,9 @@ import { TextAttributes } from "@opentui/core"
 import { useTheme } from "../context/theme"
 import { useLocal } from "../context/local"
 import { useDirectory } from "../context/directory"
+import { useRoute } from "../context/route"
+import { useSync } from "../context/sync"
+import { DARK_LLM_PROVIDER_ID } from "../util/dark-llm"
 import { Mascot } from "./mascot"
 
 /**
@@ -14,8 +17,26 @@ export function Header() {
   const { theme } = useTheme()
   const local = useLocal()
   const directory = useDirectory()
-  const model = createMemo(() => local.model.parsed())
-  const tier = createMemo(() => local.model.variant.current())
+  const route = useRoute()
+  const sync = useSync()
+
+  // The model actually being VIEWED. A subagent session runs on its own lane (e.g. Mr.Agent), so read
+  // it from that session's latest assistant message; fall back to the globally-selected model on the
+  // home screen / before any reply. Returns { model, tier, provider }.
+  const shown = createMemo(() => {
+    const data = route.data
+    const sid = data.type === "session" ? data.sessionID : undefined
+    const modelID = sid ? (sync.data.message[sid] ?? []).findLast((m) => m.role === "assistant")?.modelID : undefined
+    const parsed = local.model.parsed()
+    if (modelID) {
+      const name = sync.data.provider.find((p) => p.id === DARK_LLM_PROVIDER_ID)?.models[modelID]?.name ?? modelID
+      const m = name.match(/^(.*?)\s*·\s*(low|med|high|ultra)\s*$/i)
+      if (m) return { model: m[1], tier: m[2], provider: parsed.provider }
+      const idm = modelID.match(/^(.+)-(low|med|high|ultra)$/)
+      return { model: idm ? idm[1] : name, tier: idm?.[2], provider: parsed.provider }
+    }
+    return { model: parsed.model, tier: local.model.variant.current(), provider: parsed.provider }
+  })
 
   return (
     <box
@@ -37,12 +58,12 @@ export function Header() {
             Welcome back!
           </text>
           <text>
-            <span style={{ fg: theme.text }}>{model().model}</span>
-            {tier() ? <span style={{ fg: theme.textMuted }}> · {tier()}</span> : null}
+            <span style={{ fg: theme.text }}>{shown().model}</span>
+            {shown().tier ? <span style={{ fg: theme.textMuted }}> · {shown().tier}</span> : null}
           </text>
           <text>
             <span style={{ fg: theme.textMuted }}>
-              {model().provider} · {directory()}
+              {shown().provider} · {directory()}
             </span>
           </text>
         </box>
