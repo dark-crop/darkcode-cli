@@ -1600,7 +1600,8 @@ export function Prompt(props: PromptProps) {
                 <text fg={theme.accent}>(new working copy)</text>
               </box>
             </Match>
-            <Match when={true}>{props.hint ?? null}</Match>
+            {/* Empty left spacer so justifyContent:space-between keeps the token count pinned right. */}
+            <Match when={true}>{props.hint ?? <box />}</Match>
           </Switch>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
